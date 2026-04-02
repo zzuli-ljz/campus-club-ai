@@ -23,24 +23,61 @@ export const useActivities = () => {
     }
   }, []);
 
-  // 创建新活动
+  // 创建新活动（同时创建动态）
   const createActivity = useCallback(async (activityData) => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // 处理 author_id - 支持传入的 author_id 或从 auth 获取
+      let authorId = activityData.author_id;
+      if (!authorId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        authorId = user?.id;
+      }
+
+      // 1. 先创建活动
+      const { data: activity, error: activityError } = await supabase
         .from('club_activities')
         .insert([{
-          ...activityData,
+          club_id: activityData.club_id,
+          title: activityData.title,
+          content: activityData.content,
+          activity_date: activityData.activity_date,
+          status: activityData.status || 'upcoming',
+          type: activityData.type || 'activity',
+          author_id: authorId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }])
         .select()
         .single();
 
-      if (error) throw error;
+      if (activityError) throw activityError;
+      
+      // 2. 同时创建一条动态（type=event），让学生端能看到
+      const { error: postError } = await supabase
+        .from('club_posts')
+        .insert([{
+          club_id: activityData.club_id,
+          author_id: authorId || '00000000-0000-0000-0000-000000000000',
+          author_name: '社团管理员',
+          title: activityData.title,
+          content: activityData.content || `活动时间：${activityData.activity_date || '待定'}`,
+          type: 'event', // 活动预告类型
+          images: [],
+          likes: 0,
+          views: 0,
+          is_pinned: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }]);
+
+      if (postError) {
+        console.error('创建动态失败:', postError);
+        // 不影响活动创建的成功提示
+      }
       
       toast.success('活动发布成功！');
-      return { success: true, data };
+      return { success: true, data: activity };
     } catch (err) {
       console.error('创建活动失败:', err);
       toast.error('发布失败: ' + err.message);

@@ -78,6 +78,32 @@ export const useClubs = () => {
     }
   }, []);
 
+  // 创建新社团
+  const createClub = useCallback(async (clubData) => {
+    try {
+      const { data, error } = await supabase
+        .from('clubs')
+        .insert([{
+          ...clubData,
+          members: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success('社团创建成功！');
+      await fetchClubs(); // 刷新列表
+      return { success: true, data };
+    } catch (err) {
+      console.error('创建社团失败:', err);
+      toast.error('创建失败: ' + err.message);
+      return { success: false, error: err.message };
+    }
+  }, [fetchClubs]);
+
   // 更新社团信息
   const updateClub = useCallback(async (id, updates) => {
     try {
@@ -122,6 +148,53 @@ export const useClubs = () => {
       return { success: false, error: err.message };
     }
   }, []);
+
+  // 删除社团
+  const deleteClub = useCallback(async (id) => {
+    try {
+      // 检查社团是否有成员
+      const { count, error: countError } = await supabase
+        .from('club_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('club_id', id);
+
+      if (countError) throw countError;
+
+      if (count > 0) {
+        throw new Error(`该社团还有 ${count} 名成员，无法删除`);
+      }
+
+      // 检查社团是否有关联的管理员账号
+      const { data: adminData, error: adminError } = await supabase
+        .from('club_admin_accounts')
+        .select('id')
+        .eq('club_id', id)
+        .eq('is_active', true)
+        .limit(1);
+
+      if (adminError) throw adminError;
+
+      if (adminData && adminData.length > 0) {
+        throw new Error('该社团有关联的管理员账号，请先删除管理员账号');
+      }
+
+      // 执行删除
+      const { error } = await supabase
+        .from('clubs')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success('社团已删除');
+      await fetchClubs(); // 刷新列表
+      return { success: true };
+    } catch (err) {
+      console.error('删除社团失败:', err);
+      toast.error('删除失败: ' + err.message);
+      return { success: false, error: err.message };
+    }
+  }, [fetchClubs]);
 
   // 切换招新状态
   const toggleRecruiting = useCallback(async (id, currentStatus) => {
@@ -178,7 +251,9 @@ export const useClubs = () => {
     error,
     fetchClubs,
     getClubById,
+    createClub,
     updateClub,
+    deleteClub,
     toggleRecruiting,
   };
 };

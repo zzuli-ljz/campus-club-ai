@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -50,15 +51,36 @@ import {
   Loader2,
   MoreVertical,
   Crown,
-  User as UserIcon
+  User as UserIcon,
+  MessageCircle,
+  Trophy,
+  Pin,
+  Heart,
+  Eye,
+  Image as ImageIcon,
+  Newspaper,
+  Star,
+  Send,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@/contexts/UserContext";
 import { useClubs } from "@/hooks/useClubs";
 import { useApplications } from "@/hooks/useApplications";
 import { useMembers } from "@/hooks/useMembers";
-import { useActivities } from "@/hooks/useActivities";
+import { useClubPosts } from "@/hooks/useClubPosts";
+import { useClubReviews } from "@/hooks/useClubReviews";
+import { useCategoryTags } from "@/hooks/useCategoryTags";
+import TagSelector from "@/components/TagSelector";
 import Navbar from "@/components/Navbar";
+
+// 动态类型配置
+const postTypeConfig = {
+  post: { label: '动态', icon: MessageCircle, color: 'bg-blue-100 text-blue-700', bgColor: 'bg-blue-50' },
+  notice: { label: '公告', icon: Megaphone, color: 'bg-red-100 text-red-700', bgColor: 'bg-red-50' },
+  event: { label: '活动预告', icon: Calendar, color: 'bg-green-100 text-green-700', bgColor: 'bg-green-50' },
+  achievement: { label: '荣誉', icon: Trophy, color: 'bg-yellow-100 text-yellow-700', bgColor: 'bg-yellow-50' },
+};
 
 const ClubAdmin = () => {
   const navigate = useNavigate();
@@ -66,26 +88,32 @@ const ClubAdmin = () => {
   const { getClubById, updateClub, toggleRecruiting } = useClubs();
   const { getClubApplications, updateApplicationStatus } = useApplications();
   const { getClubMembers, updateMemberRole, removeMember, isLoading: memberLoading } = useMembers();
-  const { getClubActivities, createActivity, updateActivity, deleteActivity, isLoading: activityLoading } = useActivities();
+  const { getClubPosts, createPost, deletePost, isLoading: postsLoading } = useClubPosts();
+  const { getClubReviews, getReviewStats, replyToReview, isLoading: reviewsLoading } = useClubReviews();
+  const { tagsByCategory, getTagsForCategory, addCustomTag, isLoading: tagsLoading } = useCategoryTags();
   
   const [activeTab, setActiveTab] = useState("overview");
   const [clubData, setClubData] = useState(null);
   const [applications, setApplications] = useState([]);
   const [members, setMembers] = useState([]);
-  const [activities, setActivities] = useState([]);
+  const [posts, setPosts] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
   
-  // 活动表单
-  const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
-  const [editingActivity, setEditingActivity] = useState(null);
-  const [activityForm, setActivityForm] = useState({ 
-    title: "", 
-    content: "", 
-    type: "activity",
-    activity_date: "",
-    status: "upcoming"
+  // 动态/公告表单
+  const [isPostDialogOpen, setIsPostDialogOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState(null);
+  const [postForm, setPostForm] = useState({
+    title: "",
+    content: "",
+    type: "post",
+    images: [],
+    is_pinned: false,
+    event_date: ""
   });
+  const [postImageInput, setPostImageInput] = useState("");
   
   // 成员管理
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
@@ -93,12 +121,24 @@ const ClubAdmin = () => {
   const [isMemberRoleDialogOpen, setIsMemberRoleDialogOpen] = useState(false);
   const [newRole, setNewRole] = useState("");
   
+  // 内容管理筛选和搜索
+  const [postSearchQuery, setPostSearchQuery] = useState("");
+  const [postTypeFilter, setPostTypeFilter] = useState("all");
+  const [isDeletePostDialogOpen, setIsDeletePostDialogOpen] = useState(false);
+  const [postToDelete, setPostToDelete] = useState(null);
+  
+  // 评价回复
+  const [isReplyDialogOpen, setIsReplyDialogOpen] = useState(false);
+  const [isViewAllReviewsDialogOpen, setIsViewAllReviewsDialogOpen] = useState(false);
+  const [replyForm, setReplyForm] = useState({ reviewId: null, content: "" });
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [loadingClub, setLoadingClub] = useState(false);
   const [loadingApps, setLoadingApps] = useState(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
-  const [loadingActivities, setLoadingActivities] = useState(false);
+  const [loadingPosts, setLoadingPosts] = useState(false);
+  const [loadingReviews, setLoadingReviews] = useState(false);
 
   // 权限检查 - 确保只有社团管理员能访问
   useEffect(() => {
@@ -113,7 +153,8 @@ const ClubAdmin = () => {
     if (profile?.club_id) {
       loadClubData(profile.club_id);
       loadMembers(profile.club_id);
-      loadActivities(profile.club_id);
+      loadPosts(profile.club_id);
+      loadReviews(profile.club_id);
     }
   }, [profile]);
 
@@ -162,14 +203,30 @@ const ClubAdmin = () => {
     setLoadingMembers(false);
   };
 
-  // 加载活动列表
-  const loadActivities = async (clubId) => {
-    setLoadingActivities(true);
-    const result = await getClubActivities(clubId);
+  // 加载动态列表
+  const loadPosts = async (clubId) => {
+    setLoadingPosts(true);
+    const result = await getClubPosts(clubId);
     if (result.success) {
-      setActivities(result.data);
+      setPosts(result.data);
     }
-    setLoadingActivities(false);
+    setLoadingPosts(false);
+  };
+
+  // 加载评价列表和统计
+  const loadReviews = async (clubId) => {
+    setLoadingReviews(true);
+    const [reviewsResult, statsResult] = await Promise.all([
+      getClubReviews(clubId),
+      getReviewStats(clubId)
+    ]);
+    if (reviewsResult.success) {
+      setReviews(reviewsResult.data);
+    }
+    if (statsResult.success) {
+      setReviewStats(statsResult.data);
+    }
+    setLoadingReviews(false);
   };
 
   // 处理申请审核
@@ -211,36 +268,70 @@ const ClubAdmin = () => {
     }
   };
 
-  // 打开创建活动对话框
-  const openCreateActivityDialog = () => {
-    setEditingActivity(null);
-    setActivityForm({ 
-      title: "", 
-      content: "", 
-      type: "activity",
-      activity_date: "",
-      status: "upcoming"
+  // ========== 内容管理功能 ==========
+  
+  // 打开创建动态对话框
+  const openCreatePostDialog = () => {
+    setEditingPost(null);
+    setPostForm({
+      title: "",
+      content: "",
+      type: "post",
+      images: [],
+      is_pinned: false,
+      event_date: ""
     });
-    setIsActivityDialogOpen(true);
+    setPostImageInput("");
+    setIsPostDialogOpen(true);
   };
 
-  // 打开编辑活动对话框
-  const openEditActivityDialog = (activity) => {
-    setEditingActivity(activity);
-    setActivityForm({ 
-      title: activity.title, 
-      content: activity.content || "", 
-      type: activity.type || "activity",
-      activity_date: activity.activity_date || "",
-      status: activity.status || "upcoming"
+  // 打开编辑动态对话框
+  const openEditPostDialog = (post) => {
+    setEditingPost(post);
+    setPostForm({
+      title: post.title,
+      content: post.content,
+      type: post.type || "post",
+      images: post.images || [],
+      is_pinned: post.is_pinned || false,
+      event_date: post.event_date || ""
     });
-    setIsActivityDialogOpen(true);
+    setPostImageInput("");
+    setIsPostDialogOpen(true);
   };
 
-  // 保存活动（创建或更新）
-  const handleSaveActivity = async () => {
-    if (!activityForm.title.trim()) {
-      toast.error("请输入活动标题");
+  // 添加图片
+  const handleAddImage = () => {
+    if (!postImageInput.trim()) return;
+    setPostForm(prev => ({
+      ...prev,
+      images: [...prev.images, postImageInput.trim()]
+    }));
+    setPostImageInput("");
+  };
+
+  // 移除图片
+  const handleRemoveImage = (index) => {
+    setPostForm(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
+
+  // 保存动态（创建或更新）
+  const handleSavePost = async () => {
+    if (!postForm.title.trim()) {
+      toast.error("请输入标题");
+      return;
+    }
+    if (!postForm.content.trim()) {
+      toast.error("请输入内容");
+      return;
+    }
+
+    // 如果是活动预告类型，验证活动日期
+    if (postForm.type === 'event' && !postForm.event_date) {
+      toast.error("请选择活动日期");
       return;
     }
 
@@ -249,29 +340,83 @@ const ClubAdmin = () => {
       return;
     }
 
-    const activityData = {
+    // 构建 postData，包含 author_id（确保转为字符串）
+    const postData = {
       club_id: profile.club_id,
-      ...activityForm
+      author_id: user?.id ? String(user.id) : '00000000-0000-0000-0000-000000000000',
+      author_name: profile?.name || "管理员",
+      title: postForm.title,
+      content: postForm.content,
+      type: postForm.type,
+      images: postForm.images,
+      is_pinned: postForm.is_pinned,
+      event_date: postForm.type === 'event' ? postForm.event_date : null,
     };
 
-    let result;
-    if (editingActivity) {
-      result = await updateActivity(editingActivity.id, activityData);
-    } else {
-      result = await createActivity(activityData);
-    }
+    const result = await createPost(postData);
 
     if (result.success) {
-      setIsActivityDialogOpen(false);
-      await loadActivities(profile.club_id);
+      setIsPostDialogOpen(false);
+      await loadPosts(profile.club_id);
     }
   };
 
-  // 处理删除活动
-  const handleDeleteActivity = async (activityId) => {
-    const result = await deleteActivity(activityId);
+  // 打开删除确认对话框
+  const openDeletePostDialog = (post) => {
+    setPostToDelete(post);
+    setIsDeletePostDialogOpen(true);
+  };
+
+  // 确认删除动态
+  const handleConfirmDeletePost = async () => {
+    if (!postToDelete) return;
+    
+    const result = await deletePost(postToDelete.id);
     if (result.success) {
-      await loadActivities(profile.club_id);
+      setIsDeletePostDialogOpen(false);
+      setPostToDelete(null);
+      await loadPosts(profile.club_id);
+    }
+  };
+
+  // 打开评价回复对话框
+  const openReplyDialog = (review) => {
+    setReplyForm({
+      reviewId: review.id,
+      content: review.reply || ""
+    });
+    setIsReplyDialogOpen(true);
+  };
+
+  // 提交评价回复
+  const handleSubmitReply = async () => {
+    if (!replyForm.content.trim()) {
+      toast.error("请输入回复内容");
+      return;
+    }
+
+    if (!replyForm.reviewId) {
+      toast.error("评价ID缺失，请重新打开对话框");
+      return;
+    }
+
+    // 确保有社团ID和管理员名称
+    if (!profile?.club_id) {
+      toast.error("社团信息缺失，无法提交回复");
+      return;
+    }
+
+    const result = await replyToReview(
+      replyForm.reviewId, 
+      replyForm.content.trim(),
+      profile?.name || "管理员"
+    );
+
+    if (result.success) {
+      setIsReplyDialogOpen(false);
+      setReplyForm({ reviewId: null, content: "" });
+      // 重新加载评价列表
+      await loadReviews(profile.club_id);
     }
   };
 
@@ -318,12 +463,22 @@ const ClubAdmin = () => {
            member.role?.toLowerCase().includes(searchLower);
   });
 
+  // 过滤内容（搜索 + 类型筛选）
+  const filteredPosts = posts.filter(post => {
+    const matchesSearch = postSearchQuery === "" || 
+      post.title?.toLowerCase().includes(postSearchQuery.toLowerCase()) ||
+      post.content?.toLowerCase().includes(postSearchQuery.toLowerCase());
+    const matchesType = postTypeFilter === "all" || post.type === postTypeFilter;
+    return matchesSearch && matchesType;
+  });
+
+  // 更新侧边栏，移除活动管理
   const sidebarItems = [
     { id: "overview", label: "概览", icon: LayoutDashboard },
     { id: "info", label: "信息管理", icon: Settings },
     { id: "applications", label: "报名审核", icon: FileText },
     { id: "members", label: "成员管理", icon: Users },
-    { id: "activities", label: "活动管理", icon: Megaphone },
+    { id: "posts", label: "内容管理", icon: Newspaper },
   ];
 
   const getStatusBadge = (status) => {
@@ -339,29 +494,37 @@ const ClubAdmin = () => {
     }
   };
 
-  const getActivityTypeBadge = (type) => {
-    switch (type) {
-      case "activity":
-        return <Badge className="bg-purple-100 text-purple-700">活动</Badge>;
-      case "notice":
-        return <Badge className="bg-blue-100 text-blue-700">通知</Badge>;
-      case "urgent":
-        return <Badge className="bg-red-100 text-red-700">紧急</Badge>;
-      default:
-        return <Badge>其他</Badge>;
-    }
+  // 获取动态类型标签
+  const getPostTypeBadge = (type) => {
+    const config = postTypeConfig[type] || postTypeConfig.post;
+    return (
+      <Badge className={config.color}>
+        <config.icon className="w-3 h-3 mr-1" />
+        {config.label}
+      </Badge>
+    );
   };
 
-  const getActivityStatusBadge = (status) => {
-    switch (status) {
-      case "upcoming":
-        return <Badge variant="outline" className="border-blue-200 text-blue-600">即将开始</Badge>;
-      case "ongoing":
-        return <Badge variant="outline" className="border-green-200 text-green-600">进行中</Badge>;
-      case "completed":
-        return <Badge variant="outline" className="border-gray-200 text-gray-500">已结束</Badge>;
-      default:
-        return <Badge variant="outline">未知</Badge>;
+  // 获取活动状态显示
+  const getEventStatusBadge = (eventDate) => {
+    if (!eventDate) return null;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const event = new Date(eventDate);
+    event.setHours(0, 0, 0, 0);
+    
+    const diffTime = event - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return <Badge className="bg-gray-100 text-gray-500">已结束</Badge>;
+    } else if (diffDays === 0) {
+      return <Badge className="bg-red-100 text-red-600 animate-pulse">正在进行</Badge>;
+    } else if (diffDays <= 3) {
+      return <Badge className="bg-orange-100 text-orange-600">还有 {diffDays} 天</Badge>;
+    } else {
+      return <Badge className="bg-green-100 text-green-600">还有 {diffDays} 天</Badge>;
     }
   };
 
@@ -375,6 +538,75 @@ const ClubAdmin = () => {
       </div>
     );
   }
+
+  // 在概览页面显示最新评价
+  const renderLatestReviews = () => {
+    if (loadingReviews) {
+      return (
+        <div className="space-y-4">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+      );
+    }
+
+    if (reviews.length === 0) {
+      return <p className="text-center text-gray-500 py-4">暂无评价</p>;
+    }
+
+    return (
+      <div className="space-y-4">
+        {reviews.slice(0, 3).map((review) => (
+          <div key={review.id} className="p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <Avatar className="w-10 h-10">
+                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                    {review.user_name?.[0] || "?"}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium text-gray-900">{review.user_name}</p>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`w-4 h-4 ${star <= review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <span className="text-xs text-gray-400">
+                {new Date(review.created_at).toLocaleDateString('zh-CN')}
+              </span>
+            </div>
+            {review.content && (
+              <p className="mt-2 text-gray-600 text-sm">{review.content}</p>
+            )}
+            {review.reply ? (
+              <div className="mt-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                <p className="text-xs text-blue-600 font-medium mb-1">
+                  管理员回复 · {new Date(review.replied_at).toLocaleDateString('zh-CN')}
+                </p>
+                <p className="text-sm text-gray-700">{review.reply}</p>
+              </div>
+            ) : (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="mt-2 text-blue-600"
+                onClick={() => openReplyDialog(review)}
+              >
+                <Send className="w-4 h-4 mr-1" />
+                回复评价
+              </Button>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
@@ -506,10 +738,10 @@ const ClubAdmin = () => {
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-gray-500">总申请数</p>
-                          <p className="text-3xl font-bold text-purple-600">{applications.length}</p>
+                          <p className="text-sm text-gray-500">内容动态</p>
+                          <p className="text-3xl font-bold text-purple-600">{posts.length}</p>
                         </div>
-                        <FileText className="w-8 h-8 text-purple-200" />
+                        <Newspaper className="w-8 h-8 text-purple-200" />
                       </div>
                     </CardContent>
                   </Card>
@@ -517,14 +749,40 @@ const ClubAdmin = () => {
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-gray-500">活动数量</p>
-                          <p className="text-3xl font-bold text-green-600">{activities.length}</p>
+                          <p className="text-sm text-gray-500">社团评分</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-3xl font-bold text-orange-600">
+                              {reviewStats?.average || "0.0"}
+                            </p>
+                            <Star className="w-6 h-6 text-orange-400 fill-orange-400" />
+                          </div>
+                          <p className="text-xs text-gray-400">{reviewStats?.total || 0} 条评价</p>
                         </div>
-                        <Calendar className="w-8 h-8 text-green-200" />
+                        <TrendingUp className="w-8 h-8 text-orange-200" />
                       </div>
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* 评价列表卡片 */}
+                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-xl">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <Star className="w-5 h-5 text-yellow-500" />
+                        最新评价
+                      </CardTitle>
+                      {reviews.length > 0 && (
+                        <Button variant="ghost" size="sm" onClick={() => setIsViewAllReviewsDialogOpen(true)}>
+                          查看全部
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {renderLatestReviews()}
+                  </CardContent>
+                </Card>
 
                 {/* 最近申请 */}
                 <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-xl">
@@ -576,6 +834,24 @@ const ClubAdmin = () => {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* 快捷入口 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-xl cursor-pointer hover:shadow-xl transition-shadow" onClick={() => setActiveTab("posts")}>
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
+                          <Newspaper className="w-6 h-6 text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900">发布内容</h3>
+                          <p className="text-sm text-gray-500">发布公告、动态、活动预告、荣誉等</p>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-gray-400" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </motion.div>
             )}
 
@@ -632,15 +908,22 @@ const ClubAdmin = () => {
                             />
                           </div>
                         </div>
+                        
+                        {/* 标签选择器 - 使用 TagSelector 组件 */}
                         <div>
-                          <Label>标签（用逗号分隔）</Label>
-                          <Input
-                            value={editForm.tags?.join(", ") || ""}
-                            onChange={(e) => setEditForm({ ...editForm, tags: e.target.value.split(",").map(t => t.trim()).filter(Boolean) })}
-                            className="mt-1"
-                            placeholder="编程开发, 人工智能, 数学建模"
-                          />
+                          <Label>社团标签</Label>
+                          <div className="mt-1">
+                            <TagSelector
+                              category={clubData.category}
+                              availableTags={getTagsForCategory(clubData.category)}
+                              selectedTags={editForm.tags || []}
+                              onTagsChange={(newTags) => setEditForm({ ...editForm, tags: newTags })}
+                              onAddCustomTag={addCustomTag}
+                              maxTags={10}
+                            />
+                          </div>
                         </div>
+                        
                         <div className="flex gap-3">
                           <Button onClick={handleSaveClubInfo} className="bg-gradient-to-r from-blue-500 to-purple-600">
                             保存更改
@@ -927,55 +1210,122 @@ const ClubAdmin = () => {
               </motion.div>
             )}
 
-            {/* 活动管理页面 */}
-            {activeTab === "activities" && (
+            {/* 内容管理页面（动态/公告/荣誉/活动预告） */}
+            {activeTab === "posts" && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-6"
               >
                 <div className="flex items-center justify-between">
-                  <h1 className="text-2xl font-bold text-gray-900">活动管理</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">内容管理</h1>
                   <Button 
                     className="bg-gradient-to-r from-blue-500 to-purple-600"
-                    onClick={openCreateActivityDialog}
+                    onClick={openCreatePostDialog}
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    发布活动
+                    发布内容
                   </Button>
                 </div>
 
-                {/* 活动列表 */}
-                {loadingActivities ? (
+                {/* 搜索和筛选工具栏 */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="搜索标题或内容..."
+                      value={postSearchQuery}
+                      onChange={(e) => setPostSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Select value={postTypeFilter} onValueChange={setPostTypeFilter}>
+                    <SelectTrigger className="w-40">
+                      <Filter className="w-4 h-4 mr-2" />
+                      <SelectValue placeholder="内容类型" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">全部类型</SelectItem>
+                      <SelectItem value="post">日常动态</SelectItem>
+                      <SelectItem value="notice">重要公告</SelectItem>
+                      <SelectItem value="event">活动预告</SelectItem>
+                      <SelectItem value="achievement">荣誉展示</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* 内容列表 */}
+                {loadingPosts ? (
                   <div className="space-y-4">
                     <Skeleton className="h-32 w-full" />
                     <Skeleton className="h-32 w-full" />
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {activities.map((activity) => (
-                      <Card key={activity.id} className="border-0 shadow-lg bg-white/80 backdrop-blur-xl">
+                    {filteredPosts.map((post) => (
+                      <Card key={post.id} className={`border-0 shadow-lg bg-white/80 backdrop-blur-xl ${post.is_pinned ? 'ring-2 ring-yellow-400' : ''}`}>
                         <CardContent className="p-6">
-                          <div className="flex items-start justify-between">
+                          <div className="flex items-start justify-between gap-4">
                             <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                {getActivityTypeBadge(activity.type)}
-                                {getActivityStatusBadge(activity.status)}
-                                <span className="text-sm text-gray-400">
-                                  {activity.activity_date ? new Date(activity.activity_date).toLocaleDateString('zh-CN') : '日期待定'}
+                              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                {getPostTypeBadge(post.type)}
+                                {post.is_pinned && (
+                                  <Badge className="bg-yellow-100 text-yellow-700">
+                                    <Pin className="w-3 h-3 mr-1" />
+                                    置顶
+                                  </Badge>
+                                )}
+                                {/* 活动状态显示 */}
+                                {post.type === 'event' && post.event_date && (
+                                  getEventStatusBadge(post.event_date)
+                                )}
+                                <span className="text-xs text-gray-400 ml-2">
+                                  {new Date(post.created_at).toLocaleString('zh-CN')}
                                 </span>
                               </div>
-                              <h3 className="text-lg font-semibold text-gray-900 mb-2">{activity.title}</h3>
-                              <p className="text-gray-600 text-sm mb-3">{activity.content}</p>
-                              <p className="text-xs text-gray-400">
-                                发布时间：{new Date(activity.created_at).toLocaleString('zh-CN')}
-                              </p>
+                              <h3 className="text-lg font-semibold text-gray-900 mb-2">{post.title}</h3>
+                              <p className="text-gray-600 text-sm mb-3 line-clamp-2">{post.content}</p>
+                              
+                              {/* 活动日期显示 */}
+                              {post.type === 'event' && post.event_date && (
+                                <div className="flex items-center gap-2 mb-3 text-sm">
+                                  <Calendar className="w-4 h-4 text-green-500" />
+                                  <span className="text-gray-600">活动日期：{new Date(post.event_date).toLocaleDateString('zh-CN')}</span>
+                                </div>
+                              )}
+                              
+                              {/* 图片预览 */}
+                              {post.images && post.images.length > 0 && (
+                                <div className="flex gap-2 mb-3">
+                                  {post.images.slice(0, 3).map((img, i) => (
+                                    <div key={i} className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
+                                      <img src={img} alt="" className="w-full h-full object-cover" />
+                                    </div>
+                                  ))}
+                                  {post.images.length > 3 && (
+                                    <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 text-sm">
+                                      +{post.images.length - 3}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              <div className="flex items-center gap-4 text-sm text-gray-500">
+                                <span className="flex items-center gap-1">
+                                  <Heart className="w-4 h-4" />
+                                  {post.likes || 0}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Eye className="w-4 h-4" />
+                                  {post.views || 0}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex gap-2 ml-4">
+                            <div className="flex flex-col gap-2">
                               <Button 
                                 variant="outline" 
                                 size="sm"
-                                onClick={() => openEditActivityDialog(activity)}
+                                onClick={() => openEditPostDialog(post)}
                               >
                                 <Edit3 className="w-4 h-4 mr-1" />
                                 编辑
@@ -984,7 +1334,7 @@ const ClubAdmin = () => {
                                 variant="outline" 
                                 size="sm"
                                 className="text-red-600 border-red-200 hover:bg-red-50"
-                                onClick={() => handleDeleteActivity(activity.id)}
+                                onClick={() => openDeletePostDialog(post)}
                               >
                                 <Trash2 className="w-4 h-4 mr-1" />
                                 删除
@@ -994,105 +1344,193 @@ const ClubAdmin = () => {
                         </CardContent>
                       </Card>
                     ))}
-                    {activities.length === 0 && (
+                    {filteredPosts.length === 0 && (
                       <div className="text-center py-12">
-                        <Megaphone className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-500 mb-4">暂无活动</p>
-                        <Button 
-                          className="bg-gradient-to-r from-blue-500 to-purple-600"
-                          onClick={openCreateActivityDialog}
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          发布第一个活动
-                        </Button>
+                        <Newspaper className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-500 mb-4">
+                          {postSearchQuery || postTypeFilter !== "all" ? "没有找到匹配的内容" : "暂无内容"}
+                        </p>
+                        {(postSearchQuery || postTypeFilter !== "all") && (
+                          <Button 
+                            variant="outline"
+                            onClick={() => {
+                              setPostSearchQuery("");
+                              setPostTypeFilter("all");
+                            }}
+                          >
+                            清除筛选
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* 活动表单对话框 */}
-                <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
-                  <DialogContent className="max-w-lg">
+                {/* 发布/编辑动态对话框 */}
+                <Dialog open={isPostDialogOpen} onOpenChange={setIsPostDialogOpen}>
+                  <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle>{editingActivity ? "编辑活动" : "发布新活动"}</DialogTitle>
+                      <DialogTitle>{editingPost ? "编辑内容" : "发布新内容"}</DialogTitle>
                       <DialogDescription>
-                        {editingActivity ? "修改活动信息" : "填写活动信息，通知社团成员"}
+                        {editingPost ? "修改内容信息" : "发布公告、动态、荣誉或活动预告"}
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div>
-                        <Label>活动标题</Label>
+                        <Label>内容类型</Label>
+                        <Select
+                          value={postForm.type}
+                          onValueChange={(value) => setPostForm({ ...postForm, type: value })}
+                        >
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="post">
+                              <div className="flex items-center gap-2">
+                                <MessageCircle className="w-4 h-4 text-blue-500" />
+                                日常动态
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="notice">
+                              <div className="flex items-center gap-2">
+                                <Megaphone className="w-4 h-4 text-red-500" />
+                                重要公告
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="event">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-green-500" />
+                                活动预告
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="achievement">
+                              <div className="flex items-center gap-2">
+                                <Trophy className="w-4 h-4 text-yellow-500" />
+                                荣誉展示
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {/* 活动日期选择（仅活动预告类型显示） */}
+                      {postForm.type === 'event' && (
+                        <div>
+                          <Label>活动日期 *</Label>
+                          <Input
+                            type="date"
+                            value={postForm.event_date}
+                            onChange={(e) => setPostForm({ ...postForm, event_date: e.target.value })}
+                            className="mt-1"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">选择活动开始日期，学生端将显示活动状态</p>
+                        </div>
+                      )}
+                      
+                      <div>
+                        <Label>标题</Label>
                         <Input
-                          value={activityForm.title}
-                          onChange={(e) => setActivityForm({ ...activityForm, title: e.target.value })}
-                          placeholder="请输入活动标题"
+                          value={postForm.title}
+                          onChange={(e) => setPostForm({ ...postForm, title: e.target.value })}
+                          placeholder="请输入标题"
                           className="mt-1"
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>活动类型</Label>
-                          <Select
-                            value={activityForm.type}
-                            onValueChange={(value) => setActivityForm({ ...activityForm, type: value })}
-                          >
-                            <SelectTrigger className="mt-1">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="activity">活动</SelectItem>
-                              <SelectItem value="notice">通知</SelectItem>
-                              <SelectItem value="urgent">紧急</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label>活动状态</Label>
-                          <Select
-                            value={activityForm.status}
-                            onValueChange={(value) => setActivityForm({ ...activityForm, status: value })}
-                          >
-                            <SelectTrigger className="mt-1">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="upcoming">即将开始</SelectItem>
-                              <SelectItem value="ongoing">进行中</SelectItem>
-                              <SelectItem value="completed">已结束</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
                       <div>
-                        <Label>活动日期</Label>
-                        <Input
-                          type="date"
-                          value={activityForm.activity_date}
-                          onChange={(e) => setActivityForm({ ...activityForm, activity_date: e.target.value })}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label>活动内容</Label>
+                        <Label>内容</Label>
                         <Textarea
-                          value={activityForm.content}
-                          onChange={(e) => setActivityForm({ ...activityForm, content: e.target.value })}
-                          placeholder="请输入活动内容..."
+                          value={postForm.content}
+                          onChange={(e) => setPostForm({ ...postForm, content: e.target.value })}
+                          placeholder="请输入内容..."
                           className="mt-1 min-h-[120px]"
                         />
                       </div>
+                      <div>
+                        <Label>图片链接（可选）</Label>
+                        <div className="flex gap-2 mt-1">
+                          <Input
+                            value={postImageInput}
+                            onChange={(e) => setPostImageInput(e.target.value)}
+                            placeholder="输入图片URL后点击添加"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddImage();
+                              }
+                            }}
+                          />
+                          <Button type="button" onClick={handleAddImage} variant="outline">
+                            添加
+                          </Button>
+                        </div>
+                        {postForm.images.length > 0 && (
+                          <div className="flex gap-2 mt-2 flex-wrap">
+                            {postForm.images.map((img, i) => (
+                              <div key={i} className="relative">
+                                <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
+                                  <img src={img} alt="" className="w-full h-full object-cover" />
+                                </div>
+                                <button
+                                  onClick={() => handleRemoveImage(i)}
+                                  className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={postForm.is_pinned}
+                          onCheckedChange={(checked) => setPostForm({ ...postForm, is_pinned: checked })}
+                        />
+                        <Label>置顶显示</Label>
+                      </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsActivityDialogOpen(false)}>
+                      <Button variant="outline" onClick={() => setIsPostDialogOpen(false)}>
                         取消
                       </Button>
                       <Button 
-                        onClick={handleSaveActivity} 
+                        onClick={handleSavePost} 
                         className="bg-gradient-to-r from-blue-500 to-purple-600"
-                        disabled={activityLoading}
+                        disabled={postsLoading}
                       >
-                        {activityLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                        {editingActivity ? "保存修改" : "发布活动"}
+                        {postsLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        {editingPost ? "保存修改" : "发布内容"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                {/* 删除内容确认对话框 */}
+                <Dialog open={isDeletePostDialogOpen} onOpenChange={setIsDeletePostDialogOpen}>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2 text-red-600">
+                        <AlertCircle className="w-5 h-5" />
+                        确认删除内容
+                      </DialogTitle>
+                      <DialogDescription>
+                        您确定要删除 <span className="font-semibold text-gray-900">「{postToDelete?.title}」</span> 吗？
+                        <br /><br />
+                        <span className="text-red-600">注意：</span> 删除后无法恢复
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsDeletePostDialogOpen(false)}>
+                        取消
+                      </Button>
+                      <Button 
+                        variant="destructive"
+                        onClick={handleConfirmDeletePost}
+                        disabled={postsLoading}
+                      >
+                        {postsLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        确认删除
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -1103,8 +1541,110 @@ const ClubAdmin = () => {
           </div>
         </main>
       </div>
+
+      {/* 评价回复对话框 */}
+      <Dialog open={isReplyDialogOpen} onOpenChange={setIsReplyDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>回复评价</DialogTitle>
+            <DialogDescription>
+              回复后将显示在评价下方
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>回复内容</Label>
+              <Textarea
+                value={replyForm.content}
+                onChange={(e) => setReplyForm({ ...replyForm, content: e.target.value })}
+                placeholder="请输入回复内容..."
+                className="mt-1 min-h-[100px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReplyDialogOpen(false)}>
+              取消
+            </Button>
+            <Button 
+              onClick={handleSubmitReply} 
+              className="bg-gradient-to-r from-blue-500 to-purple-600"
+              disabled={reviewsLoading || !replyForm.content.trim()}
+            >
+              {reviewsLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+              提交回复
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 查看全部评价对话框 */}
+      <Dialog open={isViewAllReviewsDialogOpen} onOpenChange={setIsViewAllReviewsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>全部评价</DialogTitle>
+            <DialogDescription>
+              共 {reviews.length} 条评价 · 平均评分 {reviewStats?.average || "0.0"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {reviews.map((review) => (
+              <div key={review.id} className="p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-10 h-10">
+                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                        {review.user_name?.[0] || "?"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium text-gray-900">{review.user_name}</p>
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`w-4 h-4 ${star <= review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-xs text-gray-400">
+                    {new Date(review.created_at).toLocaleDateString('zh-CN')}
+                  </span>
+                </div>
+                {review.content && (
+                  <p className="mt-2 text-gray-600 text-sm">{review.content}</p>
+                )}
+                {review.reply ? (
+                  <div className="mt-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                    <p className="text-xs text-blue-600 font-medium mb-1">
+                      管理员回复 · {new Date(review.replied_at).toLocaleDateString('zh-CN')}
+                    </p>
+                    <p className="text-sm text-gray-700">{review.reply}</p>
+                  </div>
+                ) : (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="mt-2 text-blue-600"
+                    onClick={() => {
+                      setIsViewAllReviewsDialogOpen(false);
+                      openReplyDialog(review);
+                    }}
+                  >
+                    <Send className="w-4 h-4 mr-1" />
+                    回复评价
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 export default ClubAdmin;
+

@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -209,16 +208,33 @@ export const UserProvider = ({ children }) => {
       // 检查是否是学校管理员固定账号
       if (role === 'school_admin') {
         if (email === 'school@admin.com' && password === 'admin123456') {
-          const adminProfile = {
-            id: 'school-admin',
+          // 使用 Supabase Auth 登录学校管理员账号
+          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
             email: 'school@admin.com',
-            name: '学校管理员',
-            role: 'school_admin',
-          };
-          setUser({ id: 'school-admin', email: 'school@admin.com' });
-          setProfile(adminProfile);
-          toast.success("欢迎回来，学校管理员");
-          return { success: true, role: 'school_admin' };
+            password: 'admin123456',
+          });
+
+          if (authError) {
+            console.error('学校管理员 Supabase 登录失败:', authError);
+            // 如果 Supabase 登录失败，回退到本地模式
+            const adminProfile = {
+              id: 'school-admin',
+              email: 'school@admin.com',
+              name: '学校管理员',
+              role: 'school_admin',
+            };
+            setUser({ id: 'school-admin', email: 'school@admin.com' });
+            setProfile(adminProfile);
+            toast.success("欢迎回来，学校管理员（本地模式）");
+            return { success: true, role: 'school_admin' };
+          }
+
+          if (authData.user) {
+            setUser(authData.user);
+            await loadUserProfile(authData.user.id);
+            toast.success("欢迎回来，学校管理员");
+            return { success: true, role: 'school_admin' };
+          }
         } else {
           throw new Error("学校管理员账号或密码错误");
         }
@@ -343,6 +359,7 @@ export const UserProvider = ({ children }) => {
   // 登出
   const logout = async () => {
     try {
+      // 只有非本地账号才调用 Supabase 登出
       if (user?.id !== 'school-admin' && !user?.id?.startsWith('club-admin')) {
         await supabase.auth.signOut();
       }
@@ -478,4 +495,3 @@ export const UserProvider = ({ children }) => {
 };
 
 export default UserContext;
-

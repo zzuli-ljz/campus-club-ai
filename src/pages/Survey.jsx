@@ -19,10 +19,12 @@ import {
 import { toast } from "sonner";
 import { useUser } from "@/contexts/UserContext";
 import { useInterests } from "@/hooks/useInterests";
+import { useCategoryTags } from "@/hooks/useCategoryTags";
 import Navbar from "@/components/Navbar";
 
-const interestCategories = [
-  {
+// 分类配置（图标和样式）
+const categoryConfig = {
+  academic: {
     id: "academic",
     name: "学术科技",
     icon: <BookOpen className="w-5 h-5" />,
@@ -30,9 +32,9 @@ const interestCategories = [
     bgColor: "bg-blue-50",
     borderColor: "border-blue-200",
     textColor: "text-blue-700",
-    tags: ["数学建模", "编程开发", "人工智能", "物理研究", "化学实验", "生物探索", "文学创作", "历史研究", "辩论演讲", "创新创业"]
+    categoryName: "学术科技"
   },
-  {
+  arts: {
     id: "arts",
     name: "文艺创作",
     icon: <Music className="w-5 h-5" />,
@@ -40,9 +42,9 @@ const interestCategories = [
     bgColor: "bg-purple-50",
     borderColor: "border-purple-200",
     textColor: "text-purple-700",
-    tags: ["合唱团", "舞蹈队", "话剧社", "吉他社", "摄影协会", "绘画艺术", "书法篆刻", "器乐演奏", "诗词创作", "微电影"]
+    categoryName: "文艺创作"
   },
-  {
+  sports: {
     id: "sports",
     name: "体育运动",
     icon: <Trophy className="w-5 h-5" />,
@@ -50,9 +52,9 @@ const interestCategories = [
     bgColor: "bg-orange-50",
     borderColor: "border-orange-200",
     textColor: "text-orange-700",
-    tags: ["篮球", "足球", "羽毛球", "乒乓球", "网球", "游泳", "跑步", "健身", "瑜伽", "武术", "轮滑", "电竞"]
+    categoryName: "体育运动"
   },
-  {
+  public: {
     id: "public",
     name: "公益实践",
     icon: <Heart className="w-5 h-5" />,
@@ -60,9 +62,9 @@ const interestCategories = [
     bgColor: "bg-green-50",
     borderColor: "border-green-200",
     textColor: "text-green-700",
-    tags: ["志愿服务", "环保公益", "支教助学", "社区服务", "动物保护", "红十字会", "心理援助", "法律咨询", "医疗健康", "公益摄影"]
+    categoryName: "公益实践"
   },
-  {
+  tech: {
     id: "tech",
     name: "技术工程",
     icon: <Code className="w-5 h-5" />,
@@ -70,17 +72,36 @@ const interestCategories = [
     bgColor: "bg-indigo-50",
     borderColor: "border-indigo-200",
     textColor: "text-indigo-700",
-    tags: ["机器人", "无人机", "3D打印", "电子设计", "网络安全", "数据分析", "产品经理", "UI设计", "游戏开发", "区块链技术"]
+    categoryName: "技术工程"
   }
-];
+};
 
 const Survey = () => {
   const navigate = useNavigate();
   const { user } = useUser();
-  const { saveInterests, getUserInterests, isLoading } = useInterests();
+  const { saveInterests, getUserInterests, isLoading: interestsLoading } = useInterests();
+  const { tagsByCategory, isLoading: tagsLoading, categoryMapping } = useCategoryTags();
   const [selectedTags, setSelectedTags] = useState([]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  // 构建动态分类数据
+  const [interestCategories, setInterestCategories] = useState([]);
+
+  // 根据数据库标签构建分类数据
+  useEffect(() => {
+    if (Object.keys(tagsByCategory).length > 0) {
+      const dynamicCategories = Object.entries(categoryConfig).map(([key, config]) => {
+        const categoryTags = tagsByCategory[config.categoryName] || [];
+        return {
+          ...config,
+          tags: categoryTags
+        };
+      }).filter(cat => cat.tags.length > 0); // 只显示有标签的分类
+      
+      setInterestCategories(dynamicCategories);
+    }
+  }, [tagsByCategory]);
 
   // 加载已保存的兴趣标签
   useEffect(() => {
@@ -134,7 +155,7 @@ const Survey = () => {
     toast.info("已清空选择");
   };
 
-  if (isInitialLoading) {
+  if (isInitialLoading || tagsLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
         <motion.div 
@@ -143,7 +164,7 @@ const Survey = () => {
           animate={{ opacity: 1 }}
         >
           <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">加载中...</p>
+          <p className="text-gray-600">加载标签数据中...</p>
         </motion.div>
       </div>
     );
@@ -184,7 +205,7 @@ const Survey = () => {
             className="text-center mb-10"
           >
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              告诉我们要，你的<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-600">兴趣</span>所在
+              告诉我你的<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-600">兴趣</span>所在
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               选择你感兴趣的方向，AI 智能匹配系统会为你推荐最适合的社团
@@ -227,59 +248,65 @@ const Survey = () => {
           </motion.div>
 
           <div className="space-y-6">
-            {interestCategories.map((category, categoryIndex) => (
-              <motion.div
-                key={category.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: categoryIndex * 0.1 }}
-              >
-                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-xl overflow-hidden">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center text-white shadow-md`}>
-                        {category.icon}
+            {interestCategories.length === 0 ? (
+              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-xl p-8 text-center">
+                <p className="text-gray-500">暂无标签数据，请联系管理员添加</p>
+              </Card>
+            ) : (
+              interestCategories.map((category, categoryIndex) => (
+                <motion.div
+                  key={category.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: categoryIndex * 0.1 }}
+                >
+                  <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-xl overflow-hidden">
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center text-white shadow-md`}>
+                          {category.icon}
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">{category.name}</h3>
+                          <p className="text-sm text-gray-500">选择你感兴趣的{category.name}方向</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">{category.name}</h3>
-                        <p className="text-sm text-gray-500">选择你感兴趣的{category.name}方向</p>
+                      
+                      <div className="flex flex-wrap gap-3">
+                        {category.tags.map((tag) => {
+                          const isSelected = selectedTags.includes(tag);
+                          return (
+                            <motion.button
+                              key={tag}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => toggleTag(tag)}
+                              disabled={interestsLoading}
+                              className={`
+                                relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
+                                ${isSelected 
+                                  ? `${category.bgColor} ${category.textColor} ${category.borderColor} border-2 shadow-md` 
+                                  : 'bg-gray-50 text-gray-600 border-2 border-transparent hover:bg-gray-100 hover:border-gray-200'
+                                }
+                                ${isSelected ? 'pr-8' : ''}
+                                ${interestsLoading ? 'opacity-50 cursor-not-allowed' : ''}
+                              `}
+                            >
+                              {tag}
+                              {isSelected && (
+                                <span className={`absolute right-2 top-1/2 -translate-y-1/2 ${category.textColor}`}>
+                                  <Check className="w-4 h-4" />
+                                </span>
+                              )}
+                            </motion.button>
+                          );
+                        })}
                       </div>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-3">
-                      {category.tags.map((tag) => {
-                        const isSelected = selectedTags.includes(tag);
-                        return (
-                          <motion.button
-                            key={tag}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => toggleTag(tag)}
-                            disabled={isLoading}
-                            className={`
-                              relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
-                              ${isSelected 
-                                ? `${category.bgColor} ${category.textColor} ${category.borderColor} border-2 shadow-md` 
-                                : 'bg-gray-50 text-gray-600 border-2 border-transparent hover:bg-gray-100 hover:border-gray-200'
-                              }
-                              ${isSelected ? 'pr-8' : ''}
-                              ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
-                            `}
-                          >
-                            {tag}
-                            {isSelected && (
-                              <span className={`absolute right-2 top-1/2 -translate-y-1/2 ${category.textColor}`}>
-                                <Check className="w-4 h-4" />
-                              </span>
-                            )}
-                          </motion.button>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))
+            )}
           </div>
 
           {selectedTags.length > 0 && (
@@ -332,9 +359,9 @@ const Survey = () => {
             <Button
               className="flex-1 sm:flex-none h-12 px-8 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium"
               onClick={handleSubmit}
-              disabled={isAnimating || isLoading || selectedTags.length === 0}
+              disabled={isAnimating || interestsLoading || selectedTags.length === 0}
             >
-              {isAnimating || isLoading ? (
+              {isAnimating || interestsLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
