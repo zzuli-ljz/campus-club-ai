@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
-  Sparkles, 
   ArrowRight, 
   BookOpen, 
   Music, 
@@ -21,6 +20,7 @@ import { useUser } from "@/contexts/UserContext";
 import { useInterests } from "@/hooks/useInterests";
 import { useCategoryTags } from "@/hooks/useCategoryTags";
 import Navbar from "@/components/Navbar";
+import logo from "@/assets/logo.png";
 
 // 分类配置（图标和样式）
 const categoryConfig = {
@@ -202,13 +202,14 @@ const Survey = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-center mb-10"
+            className="flex flex-col items-center text-center mb-10"
           >
+            <img src={logo} alt="Logo" className="w-16 h-16 mb-4 rounded-2xl object-contain shadow-md" />
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              告诉我你的<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-600">兴趣</span>所在
+              个性化兴趣问卷
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              选择你感兴趣的方向，AI 智能匹配系统会为你推荐最适合的社团
+              选择你感兴趣的标签，AI将为你精准推荐最适合的社团
             </p>
             
             {/* AI 助手提示 */}

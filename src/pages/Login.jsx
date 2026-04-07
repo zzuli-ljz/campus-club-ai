@@ -9,9 +9,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Sparkles, Loader2, GraduationCap, Users, Shield, Info } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2, GraduationCap, Users, Shield, Info } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@/contexts/UserContext";
+import logo from "@/assets/logo.png";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -148,15 +149,10 @@ const Login = () => {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md relative z-10"
       >
-        <div className="text-center mb-8">
-          <motion.div 
-            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg mb-4"
-            whileHover={{ scale: 1.05 }}
-          >
-            <Sparkles className="w-8 h-8 text-white" />
-          </motion.div>
+        <div className="flex flex-col items-center mb-6">
+          <img src={logo} alt="Logo" className="w-12 h-12 mb-2 rounded-xl object-contain" />
           <h1 className="text-2xl font-bold text-gray-900">社团招新智能匹配平台</h1>
-          <p className="text-gray-500 mt-2">发现属于你的精彩社团</p>
+          <p className="text-gray-500 text-sm">发现属于你的精彩社团</p>
         </div>
 
         <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-xl">

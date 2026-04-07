@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
-  Sparkles, 
   ArrowLeft, 
   RefreshCw, 
   Users, 
@@ -20,6 +19,7 @@ import { useClubs } from "@/hooks/useClubs";
 import { useInterests } from "@/hooks/useInterests";
 import { useFavorites } from "@/hooks/useFavorites";
 import Navbar from "@/components/Navbar";
+import logo from "@/assets/logo.png";
 
 const Recommendations = () => {
   const navigate = useNavigate();
@@ -127,11 +127,11 @@ const Recommendations = () => {
           animate={{ opacity: 1, scale: 1 }}
         >
           <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="inline-block mb-6"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6"
           >
-            <Sparkles className="w-16 h-16 text-blue-500" />
+            <img src={logo} alt="Logo" className="w-16 h-16 object-contain" />
           </motion.div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">AI 正在为你匹配...</h2>
           <p className="text-gray-600">分析你的兴趣标签，寻找最适合的社团</p>
@@ -172,12 +172,15 @@ const Recommendations = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-10"
+            className="mb-10"
           >
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              为你找到 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-600">{recommendations.length}</span> 个匹配的社团
-            </h1>
-            <p className="text-gray-600 mb-6">基于你的兴趣标签，AI 智能推荐以下社团</p>
+            <div className="flex items-center gap-4 mb-6">
+              <img src={logo} alt="Logo" className="w-12 h-12 rounded-xl object-contain shadow-sm" />
+              <div className="text-left">
+                <h1 className="text-3xl font-bold text-gray-900">AI 智能匹配结果</h1>
+                <p className="text-gray-500">根据您的兴趣多标签相似度，为您精选以下社团</p>
+              </div>
+            </div>
             
             {/* 已选标签 */}
             <div className="flex flex-wrap justify-center gap-2 mb-6">

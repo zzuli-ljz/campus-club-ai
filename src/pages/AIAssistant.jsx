@@ -8,7 +8,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  Sparkles, 
   Send, 
   Bot, 
   User, 
@@ -26,6 +25,7 @@ import { useClubs } from "@/hooks/useClubs";
 import { useUser } from "@/contexts/UserContext";
 import { callDoubaoAI, streamDoubaoAI } from "@/services/doubaoService";
 import Navbar from "@/components/Navbar";
+import logo from "@/assets/logo.png";
 
 // 预设问题快捷按钮
 const quickQuestions = [
@@ -241,10 +241,14 @@ const AIAssistant = () => {
                       className={`flex gap-3 ${message.type === "user" ? "flex-row-reverse" : ""}`}
                     >
                       {/* 头像 */}
-                      <Avatar className={`w-10 h-10 flex-shrink-0 ${message.type === "ai" ? "bg-gradient-to-br from-purple-500 to-blue-600" : "bg-gradient-to-br from-green-500 to-emerald-600"}`}>
-                        <AvatarFallback className="text-white">
-                          {message.type === "ai" ? <Bot className="w-5 h-5" /> : <User className="w-5 h-5" />}
-                        </AvatarFallback>
+                      <Avatar className={`w-10 h-10 flex-shrink-0 ${message.type === "ai" ? "border-2 border-white shadow-sm" : "bg-gradient-to-br from-green-500 to-emerald-600"}`}>
+                        {message.type === "ai" ? (
+                          <img src={logo} alt="AI" className="w-full h-full object-contain bg-white p-1" />
+                        ) : (
+                          <AvatarFallback className="text-white">
+                            <User className="w-5 h-5" />
+                          </AvatarFallback>
+                        )}
                       </Avatar>
 
                       {/* 消息内容 */}
@@ -299,10 +303,8 @@ const AIAssistant = () => {
                       animate={{ opacity: 1, y: 0 }}
                       className="flex gap-3"
                     >
-                      <Avatar className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600">
-                        <AvatarFallback className="text-white">
-                          <Bot className="w-5 h-5" />
-                        </AvatarFallback>
+                      <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
+                        <img src={logo} alt="AI" className="w-full h-full object-contain bg-white p-1" />
                       </Avatar>
                       <div className="flex flex-col items-start max-w-[80%]">
                         <div className="px-4 py-3 rounded-2xl bg-gray-100 text-gray-800 rounded-tl-sm">
@@ -323,10 +325,8 @@ const AIAssistant = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex gap-3"
                   >
-                    <Avatar className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600">
-                      <AvatarFallback className="text-white">
-                        <Bot className="w-5 h-5" />
-                      </AvatarFallback>
+                    <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
+                      <img src={logo} alt="AI" className="w-full h-full object-contain bg-white p-1" />
                     </Avatar>
                     <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-2">
                       <div className="flex gap-1">
@@ -409,7 +409,9 @@ const AIAssistant = () => {
 
           {/* 提示信息 */}
           <p className="text-center text-xs text-gray-400 mt-2 flex items-center justify-center gap-1">
-            <Sparkles className="w-3 h-3" />
+            <div className="w-6 h-6 rounded-full bg-blue-50 flex items-center justify-center">
+              <img src={logo} alt="Logo" className="w-3 h-3 object-contain" />
+            </div>
             由豆包 AI 提供智能支持 · 点击社团卡片可查看详情
           </p>
         </div>

@@ -1,9 +1,8 @@
 import { 
-  HomeIcon, 
+  Home, 
   LogIn, 
   UserPlus, 
   ClipboardList, 
-  Sparkles, 
   Users, 
   FileText, 
   User, 
@@ -24,6 +23,7 @@ import Profile from "./pages/Profile.jsx";
 import ClubAdmin from "./pages/ClubAdmin.jsx";
 import SchoolAdmin from "./pages/SchoolAdmin.jsx";
 import AIAssistant from "./pages/AIAssistant.jsx";
+import logo from "./assets/logo.png";
 
 /**
  * Central place for defining the navigation items. Used for navigation components and routing.
@@ -32,7 +32,7 @@ export const navItems = [
   {
     title: "首页",
     to: "/",
-    icon: <HomeIcon className="h-4 w-4" />,
+    icon: <Home className="h-4 w-4" />,
     page: <Index />,
   },
   {
@@ -62,7 +62,7 @@ export const navItems = [
   {
     title: "智能推荐",
     to: "/recommendations",
-    icon: <Sparkles className="h-4 w-4" />,
+    icon: <img src={logo} alt="Logo" className="h-4 w-4 object-contain" />,
     page: <Recommendations />,
   },
   {

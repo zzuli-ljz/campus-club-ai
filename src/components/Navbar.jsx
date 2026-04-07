@@ -10,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { 
-  Sparkles, 
   User, 
   LogOut, 
   ChevronDown, 
@@ -21,6 +20,7 @@ import {
   GraduationCap
 } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
+import logo from "@/assets/logo.png";
 
 const Navbar = ({ 
   showBack = false, 
@@ -30,7 +30,7 @@ const Navbar = ({
   rightContent = null 
 }) => {
   const navigate = useNavigate();
-  const { user, isLoggedIn, logout, role } = useUser();
+  const { user, profile, isLoggedIn, logout, role } = useUser();
 
   const handleLogout = () => {
     logout();
@@ -109,7 +109,7 @@ const Navbar = ({
               onClick={() => navigate("/")}
               className="cursor-pointer"
             >
-              <Sparkles className="w-4 h-4 mr-2" />
+              <img src={logo} alt="Logo" className="w-4 h-4 mr-2 object-contain" />
               返回首页
             </DropdownMenuItem>
           </>
@@ -128,7 +128,7 @@ const Navbar = ({
               onClick={() => navigate("/")}
               className="cursor-pointer"
             >
-              <Sparkles className="w-4 h-4 mr-2" />
+              <img src={logo} alt="Logo" className="w-4 h-4 mr-2 object-contain" />
               返回首页
             </DropdownMenuItem>
           </>
@@ -207,13 +207,13 @@ const Navbar = ({
             ) : null}
             
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              {title ? (
+                <img src={logo} alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
+                {title ? (
                 <span className="font-bold text-gray-900">{title}</span>
               ) : (
-                <span className="font-bold text-xl text-gray-900 hidden sm:inline">社团招新平台</span>
+                <span className="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 hidden sm:inline">
+                  社团招新平台
+                </span>
               )}
             </Link>
           </div>
@@ -238,7 +238,7 @@ const Navbar = ({
                           role === 'club_admin' ? 'from-blue-500 to-blue-700' :
                           'from-green-500 to-emerald-600'
                         } text-white text-sm`}>
-                          {user?.name?.[0]?.toUpperCase() || "U"}
+                          {profile?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
                         </AvatarFallback>
                       </Avatar>
                       {roleIndicator && (
@@ -249,7 +249,7 @@ const Navbar = ({
                     </div>
                     <div className="hidden sm:flex flex-col items-start">
                       <span className="text-gray-700 font-medium max-w-[100px] truncate text-sm">
-                        {user?.name || "用户"}
+                        {profile?.name || user?.email?.split('@')[0] || "用户"}
                       </span>
                       <span className="text-xs text-gray-400">{roleIndicator?.label}</span>
                     </div>
@@ -258,10 +258,10 @@ const Navbar = ({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 bg-white/95 backdrop-blur-xl">
                   <div className="px-3 py-2 border-b border-gray-100">
-                    <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                    <p className="text-sm font-medium text-gray-900">{profile?.name || "用户"}</p>
                     <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                    {role === "club_admin" && user?.clubName && (
-                      <p className="text-xs text-blue-600 mt-1">{user.clubName}</p>
+                    {role === "club_admin" && profile?.club_name && (
+                      <p className="text-xs text-blue-600 mt-1">{profile.club_name}</p>
                     )}
                   </div>
                   {getRoleBasedMenuItems()}
