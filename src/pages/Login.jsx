@@ -407,9 +407,6 @@ const Login = () => {
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  {selectedRole === "school_admin" && (
-                    <p className="text-xs text-gray-500">固定账号：school@admin.com / admin123456</p>
-                  )}
                 </div>
 
                 <Button 

@@ -787,9 +787,12 @@ const SchoolAdmin = () => {
                       <CardTitle className="text-lg">系统信息</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm text-gray-600">
-                      <p>固定学校管理员账号：</p>
-                      <p className="font-mono bg-gray-100 px-2 py-1 rounded">school@admin.com</p>
-                      <p className="text-xs text-gray-400">该账号为系统内置，不可删除</p>
+                      <p>系统角色说明：</p>
+                      <ul className="list-disc list-inside space-y-1 text-xs">
+                        <li>学校管理员：拥有平台最高管理权限</li>
+                        <li>社团管理员：管理特定社团信息与成员</li>
+                        <li>学生用户：浏览社团、参与匹配与申请</li>
+                      </ul>
                     </CardContent>
                   </Card>
                 </div>
