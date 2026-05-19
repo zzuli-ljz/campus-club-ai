@@ -16,6 +16,7 @@ export default defineConfig(() => {
       hmr: {
         overlay: false,
       },
+      proxy: {},
     },
     plugins: [react()],
     resolve: {

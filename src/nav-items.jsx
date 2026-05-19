@@ -9,7 +9,9 @@ import {
   LayoutDashboard, 
   Shield,
   GraduationCap,
-  Bot
+  Bot,
+  Bell,
+  Building2
 } from "lucide-react";
 import Index from "./pages/Index.jsx";
 import Login from "./pages/Login.jsx";
@@ -23,6 +25,10 @@ import Profile from "./pages/Profile.jsx";
 import ClubAdmin from "./pages/ClubAdmin.jsx";
 import SchoolAdmin from "./pages/SchoolAdmin.jsx";
 import AIAssistant from "./pages/AIAssistant.jsx";
+import Notifications from "./pages/Notifications.jsx";
+import AdminNotifications from "./pages/AdminNotifications.jsx";
+import ApplyNewClub from "./pages/ApplyNewClub.jsx";
+import Layout from "./components/Layout.jsx";
 import logo from "./assets/logo.png";
 
 /**
@@ -33,7 +39,7 @@ export const navItems = [
     title: "首页",
     to: "/",
     icon: <Home className="h-4 w-4" />,
-    page: <Index />,
+    page: <Layout><Index /></Layout>,
   },
   {
     title: "社团列表",
@@ -93,12 +99,30 @@ export const navItems = [
     title: "登录",
     to: "/login",
     icon: <LogIn className="h-4 w-4" />,
-    page: <Login />,
+    page: <Layout><Login /></Layout>,
   },
   {
     title: "注册",
     to: "/register",
     icon: <UserPlus className="h-4 w-4" />,
-    page: <Register />,
+    page: <Layout><Register /></Layout>,
+  },
+  {
+    title: "我的通知",
+    to: "/notifications",
+    icon: <Bell className="h-4 w-4" />,
+    page: <Notifications />,
+  },
+  {
+    title: "社团通知",
+    to: "/admin-notifications",
+    icon: <Bell className="h-4 w-4" />,
+    page: <AdminNotifications />,
+  },
+  {
+    title: "申请新社团",
+    to: "/apply-new-club",
+    icon: <Building2 className="h-4 w-4" />,
+    page: <ApplyNewClub />,
   },
 ];

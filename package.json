@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -52,6 +55,7 @@
     "input-otp": "^1.2.4",
     "lucide-react": "^0.417.0",
     "next-themes": "^0.3.0",
+    "qrcode.react": "^4.2.0",
     "react": "^18.2.0",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.2.0",
@@ -59,6 +63,7 @@
     "react-resizable-panels": "^2.0.19",
     "react-router-dom": "^6.23.1",
     "recharts": "^2.12.7",
+    "resend": "^6.12.3",
     "sonner": "^1.5.0",
     "tailwind-merge": "^2.2.1",
     "tailwindcss-animate": "^1.0.7",

@@ -5,13 +5,38 @@ import { toast } from 'sonner';
 export const useClubPosts = () => {
   const [isLoading, setIsLoading] = useState(false);
 
-  // 获取社团动态列表
-  const getClubPosts = useCallback(async (clubId) => {
+  // 获取所有社团动态（用于首页展示）
+  const getAllPosts = useCallback(async (limit = 10) => {
     try {
       const { data, error } = await supabase
         .from('club_posts')
+        .select('*, clubs(*)')
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return { success: true, data: data || [] };
+    } catch (err) {
+      console.error('获取所有动态失败:', err);
+      return { success: false, error: err.message };
+    }
+  }, []);
+
+  // 获取社团动态列表
+  const getClubPosts = useCallback(async (clubId, options = {}) => {
+    try {
+      let query = supabase
+        .from('club_posts')
         .select('*')
-        .eq('club_id', clubId)
+        .eq('club_id', clubId);
+
+      // 如果有类型筛选，添加筛选条件
+      if (options.type) {
+        query = query.eq('type', options.type);
+      }
+
+      const { data, error } = await query
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -159,6 +184,7 @@ export const useClubPosts = () => {
 
   return {
     isLoading,
+    getAllPosts,
     getClubPosts,
     createPost,
     updatePost,

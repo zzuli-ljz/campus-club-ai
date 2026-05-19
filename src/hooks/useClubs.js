@@ -13,10 +13,18 @@ export const useClubs = () => {
     setError(null);
     try {
       // 获取社团列表
-      const { data: clubsData, error: clubsError } = await supabase
-        .from('clubs')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const fetchWithTimeout = async () => {
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('请求超时，请检查网络连接')), 10000);
+        });
+        const requestPromise = supabase
+          .from('clubs')
+          .select('*')
+          .order('created_at', { ascending: false });
+        return Promise.race([requestPromise, timeoutPromise]);
+      };
+
+      const { data: clubsData, error: clubsError } = await fetchWithTimeout();
 
       if (clubsError) throw clubsError;
 
@@ -241,8 +249,23 @@ export const useClubs = () => {
     }
   }, []);
 
+  // 组件挂载时获取数据
   useEffect(() => {
     fetchClubs();
+  }, [fetchClubs]);
+
+  // 页面可见性变化时自动刷新
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchClubs();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [fetchClubs]);
 
   return {

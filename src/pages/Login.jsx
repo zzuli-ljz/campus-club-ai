@@ -12,11 +12,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2, GraduationCap, Users, Shield, Info } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@/contexts/UserContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import logo from "@/assets/logo.png";
 
 const Login = () => {
   const navigate = useNavigate();
   const { login, sendMagicLink, verifyOtp, isLoading } = useUser();
+  const { t, language } = useLanguage();
   const [showPassword, setShowPassword] = useState(false);
   const [localLoading, setLocalLoading] = useState(false);
   const [loginMethod, setLoginMethod] = useState("otp"); // 默认改为验证码登录
@@ -53,11 +55,11 @@ const Login = () => {
     setShowEmailConfirmAlert(false);
     
     if (!validateEmail(email)) {
-      toast.error("请输入有效的邮箱地址");
+      toast.error(t("emailInvalid", "请输入有效的邮箱地址"));
       return;
     }
     if (password.length < 1) {
-      toast.error("请输入密码");
+      toast.error(t("passwordPlaceholder", "请输入密码"));
       return;
     }
 
@@ -77,12 +79,12 @@ const Login = () => {
 
   const handleSendOtp = async () => {
     if (!validateEmail(otpEmail)) {
-      toast.error("请输入有效的邮箱地址");
+      toast.error(t("emailInvalid", "请输入有效的邮箱地址"));
       return;
     }
 
     if (selectedRole !== "student") {
-      toast.error("社团管理员和学校管理员请使用密码登录");
+      toast.error(language === "zh" ? "社团管理员和学校管理员请使用密码登录" : "Club and school admins please use password login");
       return;
     }
 
@@ -91,12 +93,12 @@ const Login = () => {
       const result = await sendMagicLink(otpEmail);
       if (result.success) {
         setOtpSent(true);
-        toast.success("验证码已发送，5分钟内有效");
+        toast.success(language === "zh" ? "验证码已发送，5分钟内有效" : "Verification code sent, valid for 5 minutes");
       } else {
-        toast.error(result.error || "发送失败，请重试");
+        toast.error(result.error || (language === "zh" ? "发送失败，请重试" : "Send failed, please retry"));
       }
     } catch (error) {
-      toast.error("发送验证码时出错，请稍后重试");
+      toast.error(language === "zh" ? "发送验证码时出错，请稍后重试" : "Error sending code, please retry later");
     } finally {
       setLocalLoading(false);
     }
@@ -106,7 +108,7 @@ const Login = () => {
     e.preventDefault();
     
     if (!otpCode || otpCode.length !== 6) {
-      toast.error("请输入6位验证码");
+      toast.error(language === "zh" ? "请输入6位验证码" : "Please enter 6-digit code");
       return;
     }
 
@@ -121,23 +123,23 @@ const Login = () => {
   };
 
   const roleOptions = [
-    { value: "student", label: "学生", icon: GraduationCap, desc: "浏览社团、提交申请（建议验证码登录）" },
-    { value: "club_admin", label: "社团管理员", icon: Users, desc: "管理社团信息和成员" },
-    { value: "school_admin", label: "学校管理员", icon: Shield, desc: "管理平台和账号" },
+    { value: "student", label: t("student", "学生"), icon: GraduationCap, desc: language === "zh" ? "浏览社团、提交申请（建议验证码登录）" : "Browse clubs, submit applications (OTP recommended)" },
+    { value: "club_admin", label: t("clubAdmin", "社团管理员"), icon: Users, desc: language === "zh" ? "管理社团信息和成员" : "Manage club info and members" },
+    { value: "school_admin", label: t("schoolAdmin", "学校管理员"), icon: Shield, desc: language === "zh" ? "管理平台和账号" : "Manage platform and accounts" },
   ];
 
   const isProcessing = isLoading || localLoading;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-slate-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div 
-          className="absolute top-20 left-10 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30"
+          className="absolute top-20 left-10 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-30"
           animate={{ scale: [1, 1.2, 1], x: [0, 50, 0], y: [0, 30, 0] }}
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div 
-          className="absolute top-40 right-10 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-30"
+          className="absolute top-40 right-10 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-20"
           animate={{ scale: [1, 1.1, 1], x: [0, -30, 0], y: [0, 50, 0] }}
           transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
         />
@@ -151,14 +153,14 @@ const Login = () => {
       >
         <div className="flex flex-col items-center mb-6">
           <img src={logo} alt="Logo" className="w-12 h-12 mb-2 rounded-xl object-contain" />
-          <h1 className="text-2xl font-bold text-gray-900">社团招新智能匹配平台</h1>
-          <p className="text-gray-500 text-sm">发现属于你的精彩社团</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t("platformName", "社团招新智能匹配平台")}</h1>
+          <p className="text-gray-500 text-sm">{t("platformSlogan", "发现属于你的精彩社团")}</p>
         </div>
 
         <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-xl">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-xl font-semibold text-center">欢迎回来</CardTitle>
-            <CardDescription className="text-center text-gray-500">选择角色并登录</CardDescription>
+            <CardTitle className="text-xl font-semibold text-center">{t("welcomeBack", "欢迎回来")}</CardTitle>
+            <CardDescription className="text-center text-gray-500">{language === "zh" ? "选择角色并登录" : "Select role and login"}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* 邮箱未验证提示 */}
@@ -166,14 +168,14 @@ const Login = () => {
               <Alert className="bg-amber-50 border-amber-200">
                 <Info className="w-4 h-4 text-amber-600" />
                 <AlertDescription className="text-amber-700 text-sm">
-                  检测到邮箱未验证，已为您切换到验证码登录方式，无需验证即可直接登录。
+                  {language === "zh" ? "检测到邮箱未验证，已为您切换到验证码登录方式，无需验证即可直接登录。" : "Email not verified detected. Switched to OTP login - you can login directly without verification."}
                 </AlertDescription>
               </Alert>
             )}
 
             {/* 角色选择 */}
             <div className="space-y-3">
-              <Label className="text-gray-700">选择登录角色</Label>
+              <Label className="text-gray-700">{language === "zh" ? "选择登录角色" : "Select Login Role"}</Label>
               <RadioGroup 
                 value={selectedRole} 
                 onValueChange={(value) => {
@@ -216,20 +218,20 @@ const Login = () => {
             {selectedRole === "student" ? (
               <Tabs value={loginMethod} onValueChange={setLoginMethod} className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="otp">验证码登录（推荐）</TabsTrigger>
-                  <TabsTrigger value="password">密码登录</TabsTrigger>
+                  <TabsTrigger value="otp">{language === "zh" ? "验证码登录（推荐）" : "OTP (Recommended)"}</TabsTrigger>
+                  <TabsTrigger value="password">{language === "zh" ? "密码登录" : "Password"}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="password" className="space-y-4 mt-4">
                   <form onSubmit={handlePasswordLogin} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="email" className="text-gray-700">邮箱</Label>
+                      <Label htmlFor="email" className="text-gray-700">{t("email", "邮箱")}</Label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                         <Input
                           id="email"
                           type="email"
-                          placeholder="请输入邮箱"
+                          placeholder={t("emailPlaceholder", "请输入邮箱")}
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           className="pl-10 h-11 bg-white/50 border-gray-200"
@@ -240,9 +242,9 @@ const Login = () => {
                     
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label htmlFor="password" className="text-gray-700">密码</Label>
+                        <Label htmlFor="password" className="text-gray-700">{t("password", "密码")}</Label>
                         <Link to="/reset-password" className="text-xs text-blue-600 hover:text-blue-700">
-                          忘记密码？
+                          {t("forgotPassword", "忘记密码？")}
                         </Link>
                       </div>
                       <div className="relative">
@@ -250,7 +252,7 @@ const Login = () => {
                         <Input
                           id="password"
                           type={showPassword ? "text" : "password"}
-                          placeholder="请输入密码"
+                          placeholder={t("passwordPlaceholder", "请输入密码")}
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           className="pl-10 pr-10 h-11 bg-white/50 border-gray-200"
@@ -264,12 +266,12 @@ const Login = () => {
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
-                      <p className="text-xs text-amber-600">密码登录可能需要邮箱验证，如遇问题请使用验证码登录</p>
+                      <p className="text-xs text-amber-600">{language === "zh" ? "密码登录可能需要邮箱验证，如遇问题请使用验证码登录" : "Password login may require email verification"}</p>
                     </div>
 
                     <Button 
                       type="submit" 
-                      className="w-full h-11 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+                      className="w-full h-11 bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-800 hover:to-blue-600 text-white"
                       disabled={isProcessing}
                     >
                       {isProcessing ? (
@@ -277,7 +279,7 @@ const Login = () => {
                       ) : (
                         <ArrowRight className="w-4 h-4 mr-2" />
                       )}
-                      立即登录
+                      {t("signIn", "立即登录")}
                     </Button>
                   </form>
                 </TabsContent>
@@ -285,14 +287,14 @@ const Login = () => {
                 <TabsContent value="otp" className="space-y-4 mt-4">
                   <form onSubmit={handleOtpLogin} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="otpEmail" className="text-gray-700">学校邮箱</Label>
+                      <Label htmlFor="otpEmail" className="text-gray-700">{language === "zh" ? "学校邮箱" : "School Email"}</Label>
                       <div className="flex gap-2">
                         <div className="relative flex-1">
                           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                           <Input
                             id="otpEmail"
                             type="email"
-                            placeholder="请输入学校邮箱"
+                            placeholder={language === "zh" ? "请输入学校邮箱" : "Enter school email"}
                             value={otpEmail}
                             onChange={(e) => setOtpEmail(e.target.value)}
                             disabled={otpSent || isProcessing}
@@ -306,13 +308,13 @@ const Login = () => {
                           variant="outline"
                           className="h-11 px-4 whitespace-nowrap"
                         >
-                          {otpSent ? "已发送" : "获取验证码"}
+                          {otpSent ? (language === "zh" ? "已发送" : "Sent") : (language === "zh" ? "获取验证码" : "Get Code")}
                         </Button>
                       </div>
-                      <p className="text-xs text-green-600">✓ 无需注册，首次登录自动创建账号</p>
-                      <p className="text-xs text-green-600">✓ 无需邮箱验证，输入验证码即可登录</p>
+                      <p className="text-xs text-green-600">✓ {language === "zh" ? "无需注册，首次登录自动创建账号" : "No registration needed, auto-create account on first login"}</p>
+                      <p className="text-xs text-green-600">✓ {language === "zh" ? "无需邮箱验证，输入验证码即可登录" : "No email verification needed"}</p>
                       {otpSent && (
-                        <p className="text-xs text-amber-600">⚠ 验证码5分钟内有效，请及时输入</p>
+                        <p className="text-xs text-amber-600">⚠ {language === "zh" ? "验证码5分钟内有效，请及时输入" : "Code valid for 5 minutes"}</p>
                       )}
                     </div>
 
@@ -322,18 +324,18 @@ const Login = () => {
                         animate={{ opacity: 1, height: "auto" }}
                         className="space-y-2"
                       >
-                        <Label htmlFor="otpCode" className="text-gray-700">验证码</Label>
+                        <Label htmlFor="otpCode" className="text-gray-700">{language === "zh" ? "验证码" : "Verification Code"}</Label>
                         <Input
                           id="otpCode"
                           type="text"
-                          placeholder="请输入6位验证码"
+                          placeholder={language === "zh" ? "请输入6位验证码" : "Enter 6-digit code"}
                           value={otpCode}
                           onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                           className="h-11 text-center text-lg tracking-widest bg-white/50 border-gray-200"
                           maxLength={6}
                         />
                         <div className="flex justify-between items-center">
-                          <p className="text-xs text-gray-500">验证码将在5分钟后过期</p>
+                          <p className="text-xs text-gray-500">{language === "zh" ? "验证码将在5分钟后过期" : "Code expires in 5 minutes"}</p>
                           <Button
                             type="button"
                             variant="link"
@@ -342,11 +344,11 @@ const Login = () => {
                             onClick={() => {
                               setOtpSent(false);
                               setOtpCode("");
-                              toast.info("请重新获取验证码");
+                              toast.info(language === "zh" ? "请重新获取验证码" : "Please get a new code");
                             }}
                             disabled={isProcessing}
                           >
-                            重新获取
+                            {language === "zh" ? "重新获取" : "Resend"}
                           </Button>
                         </div>
                       </motion.div>
@@ -354,7 +356,7 @@ const Login = () => {
 
                     <Button 
                       type="submit" 
-                      className="w-full h-11 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+                      className="w-full h-11 bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-800 hover:to-blue-600 text-white"
                       disabled={isProcessing || !otpSent}
                     >
                       {isProcessing ? (
@@ -362,7 +364,7 @@ const Login = () => {
                       ) : (
                         <ArrowRight className="w-4 h-4 mr-2" />
                       )}
-                      验证登录
+                      {language === "zh" ? "验证登录" : "Verify & Login"}
                     </Button>
                   </form>
                 </TabsContent>
@@ -371,13 +373,13 @@ const Login = () => {
               // 管理员直接显示密码登录
               <form onSubmit={handlePasswordLogin} className="space-y-4 mt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-gray-700">邮箱</Label>
+                  <Label htmlFor="email" className="text-gray-700">{t("email", "邮箱")}</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <Input
                       id="email"
                       type="email"
-                      placeholder="请输入邮箱"
+                      placeholder={t("emailPlaceholder", "请输入邮箱")}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-10 h-11 bg-white/50 border-gray-200"
@@ -387,13 +389,13 @@ const Login = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-gray-700">密码</Label>
+                  <Label htmlFor="password" className="text-gray-700">{t("password", "密码")}</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-gray-400 w-4 h-4" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="请输入密码"
+                      placeholder={t("passwordPlaceholder", "请输入密码")}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="pl-10 pr-10 h-11 bg-white/50 border-gray-200"
@@ -411,7 +413,7 @@ const Login = () => {
 
                 <Button 
                   type="submit" 
-                  className="w-full h-11 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+                  className="w-full h-11 bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-800 hover:to-blue-600 text-white"
                   disabled={isProcessing}
                 >
                   {isProcessing ? (
@@ -419,7 +421,7 @@ const Login = () => {
                   ) : (
                     <ArrowRight className="w-4 h-4 mr-2" />
                   )}
-                  立即登录
+                  {t("signIn", "立即登录")}
                 </Button>
               </form>
             )}
@@ -430,12 +432,12 @@ const Login = () => {
                 <span className="w-full border-t border-gray-200" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white/80 px-2 text-gray-500">还没有账号？</span>
+                <span className="bg-white/80 px-2 text-gray-500">{t("noAccount", "还没有账号？")}</span>
               </div>
             </div>
             <Link to="/register" className="w-full">
               <Button variant="outline" className="w-full h-11 border-gray-300 hover:bg-gray-50">
-                学生注册
+                {language === "zh" ? "学生注册" : "Student Register"}
               </Button>
             </Link>
           </CardFooter>

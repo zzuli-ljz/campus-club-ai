@@ -108,12 +108,12 @@ CREATE TABLE IF NOT EXISTS club_activities (
 -- 插入示例社团数据
 INSERT INTO clubs (name, category, description, members, tags, image, location, founded, president, contact, is_recruiting)
 VALUES 
-('程序设计协会', '学术科技', '专注于算法竞赛、编程技术交流和项目实战，定期举办编程马拉松和技术分享会。', 156, ARRAY['编程开发', '人工智能', '数学建模'], 'https://nocode.meituan.com/photo/search?keyword=programming,coding&width=400&height=300', '科技楼 301', '2015年', '张明', 'programming@school.edu.cn', true),
-('摄影协会', '文艺创作', '用镜头记录美好瞬间，定期组织外拍活动、摄影培训和作品展览。', 89, ARRAY['摄影协会', '绘画艺术', '微电影'], 'https://nocode.meituan.com/photo/search?keyword=photography,camera&width=400&height=300', '艺术中心 205', '2012年', '刘芳', 'photo@school.edu.cn', true),
-('篮球社', '体育运动', '热爱篮球，享受团队合作的乐趣。每周定期训练，组织校内联赛。', 120, ARRAY['篮球', '健身'], 'https://nocode.meituan.com/photo/search?keyword=basketball,sport&width=400&height=300', '体育馆', '2010年', '王强', 'basketball@school.edu.cn', true),
-('志愿者协会', '公益实践', '致力于社区服务、支教助学和环保公益，用行动传递温暖。', 200, ARRAY['志愿服务', '支教助学', '环保公益'], 'https://nocode.meituan.com/photo/search?keyword=volunteer,community&width=400&height=300', '学生活动中心 102', '2008年', '陈静', 'volunteer@school.edu.cn', true),
-('机器人创新实验室', '技术工程', '探索机器人技术，参与各类机器人竞赛，培养工程实践能力。', 45, ARRAY['机器人', '电子设计', '3D打印', '编程开发'], 'https://nocode.meituan.com/photo/search?keyword=robot,technology&width=400&height=300', '工程楼 实验室 B', '2018年', '吴昊', 'robot@school.edu.cn', true),
-('合唱团', '文艺创作', '用歌声传递情感，定期举办音乐会和参加校内外演出。', 80, ARRAY['合唱团', '器乐演奏'], 'https://nocode.meituan.com/photo/search?keyword=choir,singing&width=400&height=300', '音乐厅', '2011年', '李丽', 'choir@school.edu.cn', true),
-('羽毛球协会', '体育运动', '挥洒汗水，享受运动的快乐。新手友好，提供基础训练。', 95, ARRAY['羽毛球', '健身'], 'https://nocode.meituan.com/photo/search?keyword=badminton,sport&width=400&height=300', '羽毛球馆', '2014年', '赵敏', 'badminton@school.edu.cn', true),
-('AI 创新社', '学术科技', '探索人工智能前沿技术，开展机器学习项目实战和论文研讨。', 78, ARRAY['人工智能', '编程开发', '数据分析'], 'https://nocode.meituan.com/photo/search?keyword=artificial,intelligence&width=400&height=300', '科技楼 405', '2019年', '孙伟', 'ai@school.edu.cn', true)
+('程序设计协会', '学术科技', '专注于算法竞赛、编程技术交流和项目实战，定期举办编程马拉松和技术分享会。', 156, ARRAY['编程开发', '人工智能', '数学建模'], NULL, '科技楼 301', '2015年', '张明', 'programming@school.edu.cn', true),
+('摄影协会', '文艺创作', '用镜头记录美好瞬间，定期组织外拍活动、摄影培训和作品展览。', 89, ARRAY['摄影协会', '绘画艺术', '微电影'], NULL, '艺术中心 205', '2012年', '刘芳', 'photo@school.edu.cn', true),
+('篮球社', '体育运动', '热爱篮球，享受团队合作的乐趣。每周定期训练，组织校内联赛。', 120, ARRAY['篮球', '健身'], NULL, '体育馆', '2010年', '王强', 'basketball@school.edu.cn', true),
+('志愿者协会', '公益实践', '致力于社区服务、支教助学和环保公益，用行动传递温暖。', 200, ARRAY['志愿服务', '支教助学', '环保公益'], NULL, '学生活动中心 102', '2008年', '陈静', 'volunteer@school.edu.cn', true),
+('机器人创新实验室', '技术工程', '探索机器人技术，参与各类机器人竞赛，培养工程实践能力。', 45, ARRAY['机器人', '电子设计', '3D打印', '编程开发'], NULL, '工程楼 实验室 B', '2018年', '吴昊', 'robot@school.edu.cn', true),
+('合唱团', '文艺创作', '用歌声传递情感，定期举办音乐会和参加校内外演出。', 80, ARRAY['合唱团', '器乐演奏'], NULL, '音乐厅', '2011年', '李丽', 'choir@school.edu.cn', true),
+('羽毛球协会', '体育运动', '挥洒汗水，享受运动的快乐。新手友好，提供基础训练。', 95, ARRAY['羽毛球', '健身'], NULL, '羽毛球馆', '2014年', '赵敏', 'badminton@school.edu.cn', true),
+('AI 创新社', '学术科技', '探索人工智能前沿技术，开展机器学习项目实战和论文研讨。', 78, ARRAY['人工智能', '编程开发', '数据分析'], NULL, '科技楼 405', '2019年', '孙伟', 'ai@school.edu.cn', true)
 ON CONFLICT DO NOTHING;

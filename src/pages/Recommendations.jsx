@@ -18,6 +18,7 @@ import { useUser } from "@/contexts/UserContext";
 import { useClubs } from "@/hooks/useClubs";
 import { useInterests } from "@/hooks/useInterests";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useLanguage } from "@/contexts/LanguageContext";
 import Navbar from "@/components/Navbar";
 import logo from "@/assets/logo.png";
 
@@ -27,6 +28,7 @@ const Recommendations = () => {
   const { clubs, isLoading: clubsLoading } = useClubs();
   const { getUserInterests } = useInterests();
   const { getUserFavorites, addFavorite, removeFavorite, checkIsFavorite } = useFavorites();
+  const { language } = useLanguage();
   const [selectedTags, setSelectedTags] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +36,7 @@ const Recommendations = () => {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      toast.error("请先登录");
+      toast.error(language === "zh" ? "请先登录" : "Please login first");
       navigate("/login");
       return;
     }
@@ -48,7 +50,7 @@ const Recommendations = () => {
         setSelectedTags(interestsResult.data);
       } else {
         // 如果没有兴趣标签，引导用户去填写
-        toast.error("请先完成兴趣问卷");
+        toast.error(language === "zh" ? "请先完成兴趣问卷" : "Please complete the interest survey first");
         navigate("/survey");
         return;
       }
@@ -63,14 +65,14 @@ const Recommendations = () => {
     };
 
     loadData();
-  }, [isLoggedIn, user, navigate, getUserInterests, getUserFavorites]);
+  }, [isLoggedIn, user, navigate, getUserInterests, getUserFavorites, language]);
 
   // 计算推荐
   useEffect(() => {
     if (clubs.length > 0 && selectedTags.length > 0) {
       const matched = clubs.map(club => {
         const matchCount = club.tags?.filter(tag => selectedTags.includes(tag)).length || 0;
-        const score = Math.min(98, 60 + matchCount * 15 + Math.floor(Math.random() * 10));
+        const score = Math.min(98, 60 + matchCount * 8 + Math.floor(Math.random() * 10));
         return { ...club, matchScore: score };
       }).sort((a, b) => b.matchScore - a.matchScore);
       
@@ -80,7 +82,7 @@ const Recommendations = () => {
 
   const toggleFavorite = async (club) => {
     if (!isLoggedIn) {
-      toast.error("请先登录后再进行操作");
+      toast.error(language === "zh" ? "请先登录后再进行操作" : "Please login to continue");
       navigate("/login");
       return;
     }
@@ -100,7 +102,7 @@ const Recommendations = () => {
 
   const handleApply = (club) => {
     if (!isLoggedIn) {
-      toast.error("请先登录后再进行操作");
+      toast.error(language === "zh" ? "请先登录后再进行操作" : "Please login to continue");
       navigate("/login");
       return;
     }
@@ -113,7 +115,7 @@ const Recommendations = () => {
 
   if (loading || clubsLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-slate-50 flex items-center justify-center">
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <motion.div 
             className="absolute top-20 left-10 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30"
@@ -133,15 +135,15 @@ const Recommendations = () => {
           >
             <img src={logo} alt="Logo" className="w-16 h-16 object-contain" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">AI 正在为你匹配...</h2>
-          <p className="text-gray-600">分析你的兴趣标签，寻找最适合的社团</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{language === "zh" ? "AI 正在为你匹配..." : "AI is matching for you..."}</h2>
+          <p className="text-gray-600">{language === "zh" ? "分析你的兴趣标签，寻找最适合的社团" : "Analyzing your interests to find the best clubs"}</p>
         </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-slate-50">
       {/* 背景装饰 */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div 
@@ -150,7 +152,7 @@ const Recommendations = () => {
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div 
-          className="absolute top-40 right-10 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30"
+          className="absolute top-40 right-10 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20"
           animate={{ scale: [1, 1.1, 1], x: [0, -30, 0] }}
           transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
         />
@@ -160,7 +162,7 @@ const Recommendations = () => {
       <Navbar 
         rightContent={
           <div className="text-sm text-gray-500">
-            步骤 2/2：查看推荐
+            {language === "zh" ? "步骤 2/2：查看推荐" : "Step 2/2: View Recommendations"}
           </div>
         }
       />
@@ -177,8 +179,8 @@ const Recommendations = () => {
             <div className="flex items-center gap-4 mb-6">
               <img src={logo} alt="Logo" className="w-12 h-12 rounded-xl object-contain shadow-sm" />
               <div className="text-left">
-                <h1 className="text-3xl font-bold text-gray-900">AI 智能匹配结果</h1>
-                <p className="text-gray-500">根据您的兴趣多标签相似度，为您精选以下社团</p>
+                <h1 className="text-3xl font-bold text-gray-900">{language === "zh" ? "AI 智能匹配结果" : "AI Match Results"}</h1>
+                <p className="text-gray-500">{language === "zh" ? "根据您的兴趣多标签相似度，为您精选以下社团" : "Curated clubs based on your interest tags"}</p>
               </div>
             </div>
             
@@ -193,7 +195,7 @@ const Recommendations = () => {
             
             <Button variant="outline" size="sm" onClick={handleRetake} className="bg-white/80">
               <RefreshCw className="w-4 h-4 mr-2" />
-              重新选择兴趣
+              {language === "zh" ? "重新选择兴趣" : "Reselect Interests"}
             </Button>
           </motion.div>
 
@@ -211,13 +213,19 @@ const Recommendations = () => {
                     <div className="flex flex-col md:flex-row">
                       {/* 图片区域 */}
                       <div className="md:w-48 h-48 md:h-auto relative overflow-hidden">
-                        <img 
-                          src={club.image || `https://nocode.meituan.com/photo/search?keyword=club,activity&width=400&height=300`} 
-                          alt={club.name}
-                          className="w-full h-full object-cover"
-                        />
+                        {club.image ? (
+                          <img 
+                            src={club.image}
+                            alt={club.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 flex items-center justify-center">
+                            <span className="text-4xl font-bold text-white/30">{club.name?.[0] || '社'}</span>
+                          </div>
+                        )}
                         <div className="absolute top-3 left-3">
-                          <Badge className="bg-gradient-to-r from-blue-500 to-purple-600 text-white border-0">
+                          <Badge className="bg-gradient-to-r from-blue-700 to-blue-500 text-white border-0">
                             {club.category}
                           </Badge>
                         </div>
@@ -231,19 +239,19 @@ const Recommendations = () => {
                             <div className="flex items-center gap-4 text-sm text-gray-500">
                               <span className="flex items-center gap-1">
                                 <Users className="w-4 h-4" />
-                                {club.members || 0} 人
+                                {club.members || 0}{language === "zh" ? " 人" : " members"}
                               </span>
                               <span className="flex items-center gap-1">
                                 <MapPin className="w-4 h-4" />
-                                {club.location || "待定"}
+                                {club.location || (language === "zh" ? "待定" : "TBD")}
                               </span>
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-600">
+                            <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-blue-500">
                               {club.matchScore}%
                             </div>
-                            <div className="text-xs text-gray-500">匹配度</div>
+                            <div className="text-xs text-gray-500">{language === "zh" ? "匹配度" : "Match"}</div>
                           </div>
                         </div>
                         
@@ -256,7 +264,7 @@ const Recommendations = () => {
                               key={tag}
                               className={`text-xs px-2 py-1 rounded-full ${
                                 selectedTags.includes(tag)
-                                  ? 'bg-blue-100 text-blue-700'
+                                  ? 'bg-blue-100 text-blue-800'
                                   : 'bg-gray-100 text-gray-600'
                               }`}
                             >
@@ -268,10 +276,10 @@ const Recommendations = () => {
                         {/* 操作按钮 */}
                         <div className="flex gap-3">
                           <Button 
-                            className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+                            className="flex-1 bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-800 hover:to-blue-600 text-white"
                             onClick={() => handleApply(club)}
                           >
-                            申请加入
+                            {language === "zh" ? "申请加入" : "Apply"}
                           </Button>
                           <Button
                             variant="outline"
@@ -306,7 +314,7 @@ const Recommendations = () => {
           >
             <Button variant="outline" size="lg" onClick={() => navigate("/")} className="bg-white/80">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              返回首页
+              {language === "zh" ? "返回首页" : "Back to Home"}
             </Button>
           </motion.div>
         </div>

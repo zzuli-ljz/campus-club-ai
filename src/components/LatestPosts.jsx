@@ -17,18 +17,20 @@ import {
   Newspaper
 } from 'lucide-react';
 import { useClubPosts } from '@/hooks/useClubPosts';
-
-const typeConfig = {
-  post: { label: '动态', icon: MessageCircle, color: 'bg-blue-100 text-blue-700' },
-  notice: { label: '公告', icon: Megaphone, color: 'bg-red-100 text-red-700' },
-  event: { label: '活动', icon: Calendar, color: 'bg-green-100 text-green-700' },
-  achievement: { label: '荣誉', icon: Trophy, color: 'bg-yellow-100 text-yellow-700' },
-};
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const LatestPosts = () => {
   const navigate = useNavigate();
   const { getAllPosts } = useClubPosts();
+  const { language } = useLanguage();
   const [posts, setPosts] = useState([]);
+
+  const typeConfig = {
+    post: { label: language === "zh" ? '动态' : 'Posts', icon: MessageCircle, color: 'bg-blue-100 text-blue-700' },
+    notice: { label: language === "zh" ? '公告' : 'Announcements', icon: Megaphone, color: 'bg-red-100 text-red-700' },
+    event: { label: language === "zh" ? '活动' : 'Events', icon: Calendar, color: 'bg-green-100 text-green-700' },
+    achievement: { label: language === "zh" ? '荣誉' : 'Achievements', icon: Trophy, color: 'bg-yellow-100 text-yellow-700' },
+  };
 
   useEffect(() => {
     loadPosts();
@@ -54,15 +56,15 @@ const LatestPosts = () => {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays < 0) {
-      return { text: '已结束', color: 'bg-gray-100 text-gray-500' };
+      return { text: language === "zh" ? '已结束' : 'Ended', color: 'bg-gray-100 text-gray-500' };
     } else if (diffDays === 0) {
-      return { text: '正在进行', color: 'bg-red-500 text-white', animate: true };
+      return { text: language === "zh" ? '正在进行' : 'In Progress', color: 'bg-red-500 text-white', animate: true };
     } else if (diffDays === 1) {
-      return { text: '明天开始', color: 'bg-orange-100 text-orange-600' };
+      return { text: language === "zh" ? '明天开始' : 'Starts Tomorrow', color: 'bg-orange-100 text-orange-600' };
     } else if (diffDays <= 3) {
-      return { text: `还有 ${diffDays} 天`, color: 'bg-orange-100 text-orange-600' };
+      return { text: language === "zh" ? `还有 ${diffDays} 天` : `${diffDays} days left`, color: 'bg-orange-100 text-orange-600' };
     } else {
-      return { text: `还有 ${diffDays} 天`, color: 'bg-green-100 text-green-600' };
+      return { text: language === "zh" ? `还有 ${diffDays} 天` : `${diffDays} days left`, color: 'bg-green-100 text-green-600' };
     }
   };
 
@@ -80,11 +82,11 @@ const LatestPosts = () => {
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-100 text-pink-700 text-sm font-medium mb-4">
               <Newspaper className="w-4 h-4" />
-              社团动态
+              {language === "zh" ? "社团动态" : "Club Updates"}
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">最新社团资讯</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">{language === "zh" ? "最新社团资讯" : "Latest Club News"}</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              了解各社团最新活动、公告和荣誉
+              {language === "zh" ? "了解各社团最新活动、公告和荣誉" : "Discover the latest activities, announcements, and achievements from all clubs"}
             </p>
           </motion.div>
         </div>
@@ -119,7 +121,7 @@ const LatestPosts = () => {
                           className="w-10 h-10 rounded-lg object-cover"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-700 to-blue-500 flex items-center justify-center text-white font-bold">
                           {post.clubs?.name?.[0] || '?'}
                         </div>
                       )}
@@ -207,7 +209,7 @@ const LatestPosts = () => {
             className="px-8"
             onClick={() => navigate('/clubs')}
           >
-            浏览全部社团
+            {language === "zh" ? "浏览全部社团" : "Browse All Clubs"}
             <ArrowRight className="w-5 h-5 ml-2" />
           </Button>
         </motion.div>

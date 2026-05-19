@@ -16,7 +16,7 @@ export const useClubMembership = () => {
         .eq('user_id', userId)
         .eq('club_id', clubId)
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
 
       if (error) {
         // 如果没找到记录，说明不是成员
@@ -27,7 +27,7 @@ export const useClubMembership = () => {
       }
 
       return { 
-        isMember: true, 
+        isMember: !!data, 
         memberInfo: data 
       };
     } catch (err) {

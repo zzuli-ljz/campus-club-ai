@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -18,15 +18,28 @@ import {
 import { toast } from 'sonner';
 import { useUser } from '@/contexts/UserContext';
 import { useClubReviews } from '@/hooks/useClubReviews';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // 评价标签选项
-const reviewTags = [
+const getReviewTags = (lang) => lang === "zh" ? [
   "活动丰富", "氛围友好", "学长学姐很nice", "能学到东西", 
   "时间灵活", "推荐加入", "组织有序", "活动有意义"
+] : [
+  "Rich Activities", "Friendly Atmosphere", "Great Seniors", "Learning Opportunities", 
+  "Flexible Time", "Recommended", "Well Organized", "Meaningful Activities"
 ];
+
+const getRatingText = (rating, lang) => {
+  if (rating === 5) return lang === "zh" ? "非常满意" : "Very Satisfied";
+  if (rating === 4) return lang === "zh" ? "满意" : "Satisfied";
+  if (rating === 3) return lang === "zh" ? "一般" : "Average";
+  if (rating === 2) return lang === "zh" ? "不满意" : "Dissatisfied";
+  return lang === "zh" ? "非常不满意" : "Very Dissatisfied";
+};
 
 const ClubReviews = ({ clubId, showRatingForm = true }) => {
   const { user, profile } = useUser();
+  const { language } = useLanguage();
   const { 
     getClubReviews, 
     getReviewStats, 
@@ -49,68 +62,94 @@ const ClubReviews = ({ clubId, showRatingForm = true }) => {
   const [content, setContent] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  // 加载评价数据和统计
+  const loadReviews = useCallback(async () => {
+    if (!clubId) return;
+    
+    setError(null);
+    try {
+      const [reviewsResult, statsResult] = await Promise.all([
+        getClubReviews(clubId),
+        getReviewStats(clubId)
+      ]);
+      
+      // 安全地处理评价数据
+      if (reviewsResult?.success && Array.isArray(reviewsResult.data)) {
+        setReviews(reviewsResult.data);
+        // 检查当前用户是否已评价
+        if (user?.id) {
+          const userReview = reviewsResult.data.find(r => r.user_id === user.id);
+          setHasReviewed(!!userReview);
+        }
+      } else {
+        setReviews([]);
+      }
+      
+      // 安全地处理统计数据
+      if (statsResult?.success && statsResult.data) {
+        setStats({
+          average: statsResult.data.average || 0,
+          total: statsResult.data.total || 0,
+          distribution: statsResult.data.distribution || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+        });
+      } else {
+        setStats({
+          average: 0,
+          total: 0,
+          distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+        });
+      }
+    } catch (err) {
+      console.error('加载评价失败:', err);
+      setError(err.message || '加载评价失败');
+      setReviews([]);
+    }
+  }, [clubId, user?.id, getClubReviews, getReviewStats]);
 
   // 加载评价数据和统计
   useEffect(() => {
-    if (clubId) {
-      loadReviews();
-    }
-  }, [clubId]);
-
-  const loadReviews = async () => {
-    const [reviewsResult, statsResult] = await Promise.all([
-      getClubReviews(clubId),
-      getReviewStats(clubId)
-    ]);
-    
-    if (reviewsResult.success) {
-      setReviews(reviewsResult.data);
-      // 检查当前用户是否已评价
-      if (user) {
-        const userReview = reviewsResult.data.find(r => r.user_id === user.id);
-        setHasReviewed(!!userReview);
-      }
-    }
-    
-    if (statsResult.success) {
-      setStats({
-        average: statsResult.data.average || 0,
-        total: statsResult.data.total || 0,
-        distribution: statsResult.data.distribution || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
-      });
-    }
-  };
+    loadReviews();
+  }, [loadReviews]);
 
   // 提交评价
   const handleSubmitReview = async () => {
     if (!rating) {
-      toast.error("请选择评分");
+      toast.error(language === "zh" ? "请选择评分" : "Please select a rating");
       return;
     }
     
     setSubmitting(true);
-    const result = await addReview({
-      club_id: clubId,
-      rating,
-      content,
-      tags: selectedTags,
-    });
-    setSubmitting(false);
-    
-    if (result.success) {
-      setShowReviewForm(false);
-      setRating(5);
-      setContent("");
-      setSelectedTags([]);
-      await loadReviews();
+    try {
+      const result = await addReview({
+        club_id: clubId,
+        rating,
+        content,
+        tags: selectedTags,
+      });
+      
+      if (result.success) {
+        setShowReviewForm(false);
+        setRating(5);
+        setContent("");
+        setSelectedTags([]);
+        await loadReviews();
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
   // 处理点赞
   const handleLike = async (reviewId) => {
-    const result = await likeReview(reviewId);
-    if (result.success) {
-      await loadReviews();
+    try {
+      const result = await likeReview(reviewId);
+      if (result.success) {
+        await loadReviews();
+      }
+    } catch (err) {
+      console.error('点赞失败:', err);
     }
   };
 
@@ -121,7 +160,7 @@ const ClubReviews = ({ clubId, showRatingForm = true }) => {
     } else if (selectedTags.length < 3) {
       setSelectedTags([...selectedTags, tag]);
     } else {
-      toast.error("最多选择3个标签");
+      toast.error(language === "zh" ? "最多选择3个标签" : "Maximum 3 tags allowed");
     }
   };
 
@@ -146,7 +185,7 @@ const ClubReviews = ({ clubId, showRatingForm = true }) => {
     
     return (
       <div key={star} className="flex items-center gap-2 text-sm">
-        <span className="w-8 text-gray-600">{star}星</span>
+        <span className="w-8 text-gray-600">{star}{language === "zh" ? "星" : ""}</span>
         <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
           <motion.div
             initial={{ width: 0 }}
@@ -168,6 +207,18 @@ const ClubReviews = ({ clubId, showRatingForm = true }) => {
     );
   }
 
+  // 显示错误状态
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-500 mb-4">{error}</p>
+        <Button onClick={loadReviews} variant="outline">
+          {language === "zh" ? "重新加载" : "Retry"}
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* 评分统计卡片 */}
@@ -183,7 +234,7 @@ const ClubReviews = ({ clubId, showRatingForm = true }) => {
               <div className="flex justify-center md:justify-start mt-2">
                 {renderStars(Math.round(stats.average))}
               </div>
-              <p className="text-sm text-gray-500 mt-1">{stats.total} 条评价</p>
+              <p className="text-sm text-gray-500 mt-1">{stats.total} {language === "zh" ? "条评价" : "reviews"}</p>
             </div>
             
             {/* 右侧：分布条形图 */}
@@ -201,10 +252,10 @@ const ClubReviews = ({ clubId, showRatingForm = true }) => {
         <div className="flex justify-end">
           <Button
             onClick={() => setShowReviewForm(true)}
-            className="bg-gradient-to-r from-blue-500 to-purple-600"
+            className="bg-gradient-to-r from-blue-700 to-blue-500"
           >
             <MessageCircle className="w-4 h-4 mr-2" />
-            写评价
+            {language === "zh" ? "写评价" : "Write Review"}
           </Button>
         </div>
       )}
@@ -217,11 +268,11 @@ const ClubReviews = ({ clubId, showRatingForm = true }) => {
         >
           <Card className="border-0 shadow-md">
             <CardContent className="p-6 space-y-4">
-              <h3 className="font-semibold text-lg">发表评价</h3>
+              <h3 className="font-semibold text-lg">{language === "zh" ? "发表评价" : "Submit Review"}</h3>
               
               {/* 星级选择 */}
               <div className="flex items-center gap-4">
-                <span className="text-gray-600">评分：</span>
+                <span className="text-gray-600">{language === "zh" ? "评分：" : "Rating:"}</span>
                 <div className="flex gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
@@ -236,18 +287,15 @@ const ClubReviews = ({ clubId, showRatingForm = true }) => {
                   ))}
                 </div>
                 <span className="text-sm text-gray-500 ml-2">
-                  {rating === 5 ? "非常满意" : 
-                   rating === 4 ? "满意" : 
-                   rating === 3 ? "一般" : 
-                   rating === 2 ? "不满意" : "非常不满意"}
+                  {getRatingText(rating, language)}
                 </span>
               </div>
 
               {/* 标签选择 */}
               <div>
-                <p className="text-sm text-gray-600 mb-2">选择标签（最多3个）：</p>
+                <p className="text-sm text-gray-600 mb-2">{language === "zh" ? "选择标签（最多3个）：" : "Select tags (max 3):"}</p>
                 <div className="flex flex-wrap gap-2">
-                  {reviewTags.map((tag) => (
+                  {getReviewTags(language).map((tag) => (
                     <button
                       key={tag}
                       onClick={() => toggleTag(tag)}
@@ -265,7 +313,7 @@ const ClubReviews = ({ clubId, showRatingForm = true }) => {
 
               {/* 评价内容 */}
               <Textarea
-                placeholder="分享你的社团体验..."
+                placeholder={language === "zh" ? "分享你的社团体验..." : "Share your club experience..."}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 className="min-h-[100px]"
@@ -273,15 +321,15 @@ const ClubReviews = ({ clubId, showRatingForm = true }) => {
 
               <div className="flex gap-3 justify-end">
                 <Button variant="outline" onClick={() => setShowReviewForm(false)}>
-                  取消
+                  {language === "zh" ? "取消" : "Cancel"}
                 </Button>
                 <Button
                   onClick={handleSubmitReview}
                   disabled={submitting}
-                  className="bg-gradient-to-r from-blue-500 to-purple-600"
+                  className="bg-gradient-to-r from-blue-700 to-blue-500"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
-                  提交评价
+                  {language === "zh" ? "提交评价" : "Submit"}
                 </Button>
               </div>
             </CardContent>
@@ -294,8 +342,8 @@ const ClubReviews = ({ clubId, showRatingForm = true }) => {
         {reviews.length === 0 ? (
           <div className="text-center py-12">
             <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">暂无评价</p>
-            <p className="text-sm text-gray-400 mt-1">成为第一个评价的人吧！</p>
+            <p className="text-gray-500">{language === "zh" ? "暂无评价" : "No reviews yet"}</p>
+            <p className="text-sm text-gray-400 mt-1">{language === "zh" ? "成为第一个评价的人吧！" : "Be the first to write a review!"}</p>
           </div>
         ) : (
           reviews.map((review, index) => (
@@ -311,16 +359,16 @@ const ClubReviews = ({ clubId, showRatingForm = true }) => {
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <Avatar className="w-10 h-10">
-                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                        <AvatarFallback className="bg-gradient-to-br from-blue-700 to-blue-500 text-white">
                           {review.user_name?.[0] || "?"}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-medium text-gray-900">
-                          {review.user_name || "匿名用户"}
+                          {review.user_name || (language === "zh" ? "匿名用户" : "Anonymous User")}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {new Date(review.created_at).toLocaleDateString('zh-CN')}
+                          {new Date(review.created_at).toLocaleDateString(language === "zh" ? 'zh-CN' : 'en-US')}
                         </p>
                       </div>
                     </div>
@@ -353,10 +401,10 @@ const ClubReviews = ({ clubId, showRatingForm = true }) => {
                       <div className="flex items-center gap-2 mb-2">
                         <Shield className="w-4 h-4 text-blue-600" />
                         <span className="text-sm font-medium text-blue-700">
-                          社团管理员回复
+                          {language === "zh" ? "社团管理员回复" : "Admin Reply"}
                         </span>
                         <span className="text-xs text-blue-500">
-                          {review.replied_at && new Date(review.replied_at).toLocaleDateString('zh-CN')}
+                          {review.replied_at && new Date(review.replied_at).toLocaleDateString(language === "zh" ? 'zh-CN' : 'en-US')}
                         </span>
                       </div>
                       <div className="flex gap-2">

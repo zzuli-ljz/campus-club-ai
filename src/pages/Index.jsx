@@ -30,14 +30,18 @@ import {
   Flame,
   ChevronLeft,
   Activity,
-  Calendar
+  Calendar,
+  Newspaper,
+  Globe,
+  Building2
 } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@/contexts/UserContext";
 import { useClubs } from "@/hooks/useClubs";
 import { useActivities } from "@/hooks/useActivities";
+import { useLanguage } from "@/contexts/LanguageContext";
 import LatestPosts from "@/components/LatestPosts";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import logo from "@/assets/logo.png";
 
 const Index = () => {
@@ -45,6 +49,7 @@ const Index = () => {
   const { user, isLoggedIn, logout } = useUser();
   const { clubs, isLoading } = useClubs();
   const { getClubActivities } = useActivities();
+  const { language, toggleLanguage, t } = useLanguage();
   
   // 轮播相关状态
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -52,6 +57,9 @@ const Index = () => {
   const [autoPlay, setAutoPlay] = useState(true);
   const [featuredClubs, setFeaturedClubs] = useState([]);
   const [clubsWithActivities, setClubsWithActivities] = useState({});
+  
+  // 跟踪恢复自动播放的 setTimeout，避免组件卸载时泄漏
+  const resumeAutoPlayTimerRef = useRef(null);
 
   // 计算热门社团（综合排序：成员数+活动数+招新状态）
   useEffect(() => {
@@ -103,25 +111,37 @@ const Index = () => {
 
   // 手动切换
   const goToPrev = useCallback(() => {
+    // 清除之前的恢复定时器
+    if (resumeAutoPlayTimerRef.current) {
+      clearTimeout(resumeAutoPlayTimerRef.current);
+    }
     setDirection(-1);
     setCurrentIndex((prev) => (prev - 1 + featuredClubs.length) % featuredClubs.length);
     setAutoPlay(false); // 手动操作后暂停自动播放
-    setTimeout(() => setAutoPlay(true), 10000); // 10秒后恢复
+    // 使用 ref 跟踪定时器，以便在组件卸载时清理
+    resumeAutoPlayTimerRef.current = setTimeout(() => setAutoPlay(true), 10000); // 10秒后恢复
   }, [featuredClubs.length]);
 
   const goToNext = useCallback(() => {
+    // 清除之前的恢复定时器
+    if (resumeAutoPlayTimerRef.current) {
+      clearTimeout(resumeAutoPlayTimerRef.current);
+    }
     setDirection(1);
     setCurrentIndex((prev) => (prev + 1) % featuredClubs.length);
     setAutoPlay(false);
-    setTimeout(() => setAutoPlay(true), 10000);
+    // 使用 ref 跟踪定时器，以便在组件卸载时清理
+    resumeAutoPlayTimerRef.current = setTimeout(() => setAutoPlay(true), 10000);
   }, [featuredClubs.length]);
-
-  const stats = [
-    { number: "200+", label: "入驻社团" },
-    { number: "5000+", label: "活跃成员" },
-    { number: "98%", label: "满意度" },
-    { number: "50+", label: "年度活动" },
-  ];
+  
+  // 组件卸载时清理所有定时器
+  useEffect(() => {
+    return () => {
+      if (resumeAutoPlayTimerRef.current) {
+        clearTimeout(resumeAutoPlayTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -130,7 +150,7 @@ const Index = () => {
 
   const handleStartMatching = () => {
     if (!isLoggedIn) {
-      toast.error("请先登录后再进行操作");
+      toast.error(t("loginRequired", "请先登录后再进行操作"));
       navigate("/login");
       return;
     }
@@ -143,7 +163,7 @@ const Index = () => {
 
   const categoryColors = {
     "学术科技": "bg-blue-100 text-blue-700",
-    "文艺创作": "bg-purple-100 text-purple-700",
+    "文艺创作": "bg-blue-100 text-blue-700",
     "体育运动": "bg-orange-100 text-orange-700",
     "公益实践": "bg-green-100 text-green-700",
     "技术工程": "bg-indigo-100 text-indigo-700"
@@ -171,25 +191,36 @@ const Index = () => {
   const currentClub = featuredClubs[currentIndex];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-slate-50">
       {/* 导航栏 */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-xl border-b border-white/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
               <img src={logo} alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
-              <span className="font-bold text-xl text-gray-900">社团招新平台</span>
+              <span className="font-bold text-xl text-gray-900">{t("platformName", "社团招新平台")}</span>
             </div>
             
             <div className="flex items-center gap-4">
+              {/* 语言切换按钮 */}
               <Button
                 variant="ghost"
                 size="sm"
-                className="hidden sm:flex items-center gap-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                className="text-gray-600 hover:text-blue-600 hover:bg-blue-50 font-medium"
+                onClick={toggleLanguage}
+              >
+                <Globe className="w-4 h-4 mr-1" />
+                <span>{language === "zh" ? "EN" : "中"}</span>
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="hidden sm:flex items-center gap-2 text-blue-700 hover:text-blue-800 hover:bg-blue-50"
                 onClick={handleAIAssistant}
               >
                 <Bot className="w-4 h-4" />
-                AI顾问
+                {t("aiAdvisor", "AI顾问")}
               </Button>
               
               {isLoggedIn ? (
@@ -197,12 +228,12 @@ const Index = () => {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="flex items-center gap-2 px-3 hover:bg-white/50">
                       <Avatar className="w-8 h-8">
-                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm">
+                        <AvatarFallback className="bg-gradient-to-br from-blue-700 to-blue-500 text-white text-sm">
                           {user?.name?.[0]?.toUpperCase() || "U"}
                         </AvatarFallback>
                       </Avatar>
                       <span className="hidden sm:inline text-gray-700 font-medium max-w-[100px] truncate">
-                        {user?.name || "用户"}
+                        {user?.name || t("student", "用户")}
                       </span>
                       <ChevronDown className="w-4 h-4 text-gray-400" />
                     </Button>
@@ -217,21 +248,21 @@ const Index = () => {
                       className="cursor-pointer"
                     >
                       <User className="w-4 h-4 mr-2" />
-                      个人中心
+                      {t("personalCenter", "个人中心")}
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => navigate("/ai-assistant")}
-                      className="cursor-pointer text-purple-600"
+                      className="cursor-pointer text-blue-700"
                     >
                       <Bot className="w-4 h-4 mr-2" />
-                      AI社团顾问
+                      {t("aiAdvisor", "AI社团顾问")}
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => navigate("/clubs")}
                       className="cursor-pointer"
                     >
                       <img src={logo} alt="Logo" className="w-4 h-4 mr-2 object-contain" />
-                      浏览社团
+                      {t("browseClubs", "浏览社团")}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
@@ -239,7 +270,7 @@ const Index = () => {
                       className="cursor-pointer text-red-600 focus:text-red-600"
                     >
                       <LogOut className="w-4 h-4 mr-2" />
-                      退出登录
+                      {t("logout", "退出登录")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -247,12 +278,12 @@ const Index = () => {
                 <>
                   <Link to="/login">
                     <Button variant="ghost" className="text-gray-700 hover:text-gray-900">
-                      登录
+                      {t("login", "登录")}
                     </Button>
                   </Link>
                   <Link to="/register">
-                    <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white">
-                      立即加入
+                    <Button className="bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-800 hover:to-blue-600 text-white">
+                      {t("joinNow", "立即加入")}
                     </Button>
                   </Link>
                 </>
@@ -266,7 +297,7 @@ const Index = () => {
       <section className="relative pt-32 pb-16 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <motion.div 
-            className="absolute top-20 left-10 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30"
+            className="absolute top-20 left-10 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30"
             animate={{ 
               scale: [1, 1.2, 1],
               x: [0, 50, 0],
@@ -275,7 +306,7 @@ const Index = () => {
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
           />
           <motion.div 
-            className="absolute top-40 right-10 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30"
+            className="absolute top-40 right-10 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20"
             animate={{ 
               scale: [1, 1.1, 1],
               x: [0, -30, 0],
@@ -293,23 +324,28 @@ const Index = () => {
           >
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 text-blue-700 text-sm font-medium mb-6">
               <Star className="w-4 h-4" />
-              2026秋季招新火热进行中
+              {language === "zh" ? "2026秋季招新火热进行中" : "Fall 2026 Recruitment Now Open"}
             </span>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              发现你的<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-600">热爱</span>
+              {language === "zh" ? "发现你的" : "Discover Your"}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-blue-500">
+                {language === "zh" ? "热爱" : "Passion"}
+              </span>
               <br />
-              加入精彩社团
+              {language === "zh" ? "加入精彩社团" : "Join Amazing Clubs"}
             </h1>
             <p className="text-xl text-gray-600 mb-10 max-w-2xl mx-auto">
-              智能匹配系统帮你找到最适合的社团,开启丰富多彩的校园生活,遇见志同道合的伙伴
+              {language === "zh" 
+                ? "智能匹配系统帮你找到最适合的社团,开启丰富多彩的校园生活,遇见志同道合的伙伴"
+                : "Our smart matching system helps you find the perfect clubs, start an exciting campus life, and meet like-minded friends"}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 size="lg" 
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 h-12 text-lg"
+                className="bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-800 hover:to-blue-600 text-white px-8 h-12 text-lg"
                 onClick={handleStartMatching}
               >
-                开始匹配
+                {t("startMatching", "开始匹配")}
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
               <Link to="/clubs">
@@ -318,48 +354,26 @@ const Index = () => {
                   size="lg"
                   className="border-gray-300 hover:bg-white/50 px-8 h-12 text-lg"
                 >
-                  浏览社团
+                  {t("browseClubs", "浏览社团")}
                 </Button>
               </Link>
               <Button 
                 variant="outline" 
                 size="lg"
-                className="border-purple-300 hover:bg-purple-50 text-purple-700 px-8 h-12 text-lg"
+                className="border-blue-200 hover:bg-blue-50 text-blue-700 px-8 h-12 text-lg"
                 onClick={handleAIAssistant}
               >
                 <Bot className="w-5 h-5 mr-2" />
-                问AI顾问
+                {language === "zh" ? "问AI顾问" : "Ask AI"}
               </Button>
             </div>
           </motion.div>
         </div>
 
-        {/* 数据统计 */}
-        <div className="relative max-w-5xl mx-auto mt-16">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {stats.map((stat, index) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-xl">
-                  <CardContent className="p-6 text-center">
-                    <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-600 mb-1">
-                      {stat.number}
-                    </div>
-                    <div className="text-sm text-gray-500">{stat.label}</div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </div>
       </section>
 
       {/* 热门社团推荐区域 - 单卡片轮播 */}
-      <section className="py-12 px-4 sm:px-6 lg:px-8">
+      <section className="py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 via-blue-100 to-slate-50">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
             <motion.div
@@ -370,11 +384,13 @@ const Index = () => {
             >
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-100 text-orange-700 text-sm font-medium mb-4">
                 <Flame className="w-4 h-4" />
-                热门推荐
+                {language === "zh" ? "热门推荐" : "Hot Recommendations"}
               </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">本周热门社团</h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                {language === "zh" ? "本周热门社团" : "Weekly Hot Clubs"}
+              </h2>
               <p className="text-gray-600">
-                综合成员活跃度与近期活动精选推荐
+                {language === "zh" ? "综合成员活跃度与近期活动精选推荐" : "Curated based on member activity and recent events"}
               </p>
             </motion.div>
           </div>
@@ -415,12 +431,14 @@ const Index = () => {
                 ) : featuredClubs.length === 0 ? (
                   <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-xl p-12 text-center">
                     <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">暂无正在招新的社团</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      {language === "zh" ? "暂无正在招新的社团" : "No clubs recruiting now"}
+                    </h3>
                     <Button 
                       variant="outline"
                       onClick={() => navigate("/clubs")}
                     >
-                      浏览全部社团
+                      {t("viewAll", "浏览全部社团")}
                     </Button>
                   </Card>
                 ) : (
@@ -443,11 +461,17 @@ const Index = () => {
                     >
                       {/* 图片区域 */}
                       <div className="relative h-56 sm:h-64 overflow-hidden">
-                        <img 
-                          src={currentClub.image || `https://nocode.meituan.com/photo/search?keyword=club,activity&width=800&height=400`} 
-                          alt={currentClub.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                        />
+                        {currentClub.image ? (
+                          <img 
+                            src={currentClub.image}
+                            alt={currentClub.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 flex items-center justify-center">
+                            <span className="text-6xl font-bold text-white/30">{currentClub.name?.[0] || '社'}</span>
+                          </div>
+                        )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                         
                         {/* 分类标签 */}
@@ -460,7 +484,7 @@ const Index = () => {
                         {/* 招新状态 */}
                         <div className="absolute top-4 right-4">
                           <Badge className="bg-green-500 text-white border-0 shadow-md text-sm px-3 py-1">
-                            正在招新
+                            {t("recruiting", "正在招新")}
                           </Badge>
                         </div>
 
@@ -470,7 +494,9 @@ const Index = () => {
                             {currentIndex + 1}
                           </div>
                           <div className="text-white">
-                            <div className="text-xs opacity-80">热门排名</div>
+                            <div className="text-xs opacity-80">
+                              {language === "zh" ? "热门排名" : "Hot Rank"}
+                            </div>
                             <div className="font-semibold">TOP {currentIndex + 1}</div>
                           </div>
                         </div>
@@ -492,15 +518,15 @@ const Index = () => {
                         <div className="flex items-center gap-6 mb-4 text-sm text-gray-600">
                           <span className="flex items-center gap-1.5">
                             <Users className="w-4 h-4 text-blue-500" />
-                            {currentClub.members || 0} 位成员
+                            {currentClub.members || 0} {t("members", "位成员")}
                           </span>
                           <span className="flex items-center gap-1.5">
-                            <Activity className="w-4 h-4 text-purple-500" />
-                            {currentClub.activityCount || 0} 个活动
+                            <Activity className="w-4 h-4 text-blue-600" />
+                            {currentClub.activityCount || 0} {t("activities", "个活动")}
                           </span>
                           <span className="flex items-center gap-1.5">
                             <MapPin className="w-4 h-4 text-green-500" />
-                            {currentClub.location || "待定"}
+                            {currentClub.location || (language === "zh" ? "待定" : "TBD")}
                           </span>
                         </div>
 
@@ -519,13 +545,13 @@ const Index = () => {
                         {/* 操作按钮 */}
                         <div className="flex gap-3">
                           <Button 
-                            className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white h-11"
+                            className="flex-1 bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-800 hover:to-blue-600 text-white h-11"
                             onClick={(e) => {
                               e.stopPropagation();
                               navigate("/application", { state: { club: currentClub } });
                             }}
                           >
-                            立即申请加入
+                            {t("applyNow", "立即申请加入")}
                             <ArrowRight className="w-4 h-4 ml-2" />
                           </Button>
                           <Button 
@@ -536,7 +562,7 @@ const Index = () => {
                               navigate(`/clubs/${currentClub.id}`);
                             }}
                           >
-                            详情
+                            {t("viewDetails", "详情")}
                           </Button>
                         </div>
                       </CardContent>
@@ -553,14 +579,19 @@ const Index = () => {
                   <button
                     key={index}
                     onClick={() => {
+                      // 清除之前的恢复定时器
+                      if (resumeAutoPlayTimerRef.current) {
+                        clearTimeout(resumeAutoPlayTimerRef.current);
+                      }
                       setDirection(index > currentIndex ? 1 : -1);
                       setCurrentIndex(index);
                       setAutoPlay(false);
-                      setTimeout(() => setAutoPlay(true), 10000);
+                      // 使用 ref 跟踪定时器，以便在组件卸载时清理
+                      resumeAutoPlayTimerRef.current = setTimeout(() => setAutoPlay(true), 10000);
                     }}
                     className={`transition-all duration-300 rounded-full ${
                       index === currentIndex 
-                        ? "w-8 h-2 bg-gradient-to-r from-blue-500 to-purple-600" 
+                        ? "w-8 h-2 bg-gradient-to-r from-blue-700 to-blue-500" 
                         : "w-2 h-2 bg-gray-300 hover:bg-gray-400"
                     }`}
                   />
@@ -582,15 +613,12 @@ const Index = () => {
               className="px-8"
               onClick={() => navigate("/clubs")}
             >
-              查看全部社团
+              {t("viewAll", "查看全部社团")}
               <ChevronRight className="w-5 h-5 ml-2" />
             </Button>
           </motion.div>
         </div>
       </section>
-
-      {/* 最新社团动态板块 */}
-      <LatestPosts />
 
       {/* AI 助手介绍区域 */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
@@ -601,27 +629,31 @@ const Index = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <Card className="border-0 shadow-2xl bg-gradient-to-br from-purple-600 to-blue-700 text-white overflow-hidden relative">
-              <div className="absolute inset-0 bg-[url('https://nocode.meituan.com/photo/search?keyword=ai,technology&width=800&height=600')] opacity-10 bg-cover bg-center" />
+            <Card className="border-0 shadow-2xl bg-gradient-to-br from-blue-800 to-blue-600 text-white overflow-hidden relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 to-purple-900/20" />
               <CardContent className="relative p-8 md:p-12">
                 <div className="flex flex-col md:flex-row items-center gap-8">
                   <div className="flex-1 text-center md:text-left">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-white text-sm mb-4">
                       <Bot className="w-4 h-4" />
-                      智能 AI 助手
+                      {language === "zh" ? "智能 AI 助手" : "Smart AI Assistant"}
                     </div>
-                    <h2 className="text-3xl font-bold mb-4">不知道选什么社团？问 AI 顾问！</h2>
+                    <h2 className="text-3xl font-bold mb-4">
+                      {language === "zh" ? "不知道选什么社团？问 AI 顾问！" : "Not sure which club to choose? Ask the AI Advisor!"}
+                    </h2>
                     <p className="text-white/80 mb-6 text-lg">
-                      我们的 AI 社团顾问可以帮您推荐适合的社团、解答社团相关问题，让选择变得简单有趣。
+                      {language === "zh" 
+                        ? "我们的 AI 社团顾问可以帮您推荐适合的社团、解答社团相关问题，让选择变得简单有趣。"
+                        : "Our AI club advisor helps you find the perfect clubs and answers your questions, making choices easy and fun."}
                     </p>
                     <div className="flex flex-wrap gap-3 justify-center md:justify-start">
                       <Button 
                         size="lg"
-                        className="bg-white text-purple-600 hover:bg-purple-50"
+                        className="bg-white text-blue-700 hover:bg-blue-50"
                         onClick={handleAIAssistant}
                       >
                         <MessageCircle className="w-5 h-5 mr-2" />
-                        开始对话
+                        {language === "zh" ? "开始对话" : "Start Chat"}
                       </Button>
                       <Button 
                         size="lg"
@@ -629,7 +661,7 @@ const Index = () => {
                         className="bg-transparent border-2 border-white/50 text-white hover:bg-white/20 hover:text-white"
                         onClick={() => navigate("/survey")}
                       >
-                        兴趣匹配
+                        {t("interestSurvey", "兴趣匹配")}
                       </Button>
                     </div>
                   </div>
@@ -644,35 +676,47 @@ const Index = () => {
       </section>
 
       {/* 功能特性 */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white/30">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 via-blue-100 to-slate-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">平台特色</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              {language === "zh" ? "平台特色" : "Platform Features"}
+            </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              专为高校学生打造的智能社团招新平台,让找社团变得简单有趣
+              {language === "zh" 
+                ? "专为高校学生打造的智能社团招新平台,让找社团变得简单有趣"
+                : "Smart club recruitment platform designed for university students, making it easy and fun to find the right clubs"}
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
                 icon: <Search className="w-6 h-6" />,
-                title: "智能匹配",
-                description: "基于你的兴趣爱好和特长,AI智能推荐最适合的社团",
+                title: language === "zh" ? "智能匹配" : "Smart Matching",
+                description: language === "zh" 
+                  ? "基于你的兴趣爱好和特长,AI智能推荐最适合的社团"
+                  : "AI-powered recommendations based on your interests and skills",
               },
               {
                 icon: <Users className="w-6 h-6" />,
-                title: "海量社团",
-                description: "覆盖学术、文艺、体育、公益等各类社团,总有一个适合你",
+                title: language === "zh" ? "海量社团" : "Extensive Clubs",
+                description: language === "zh"
+                  ? "覆盖学术、文艺、体育、公益等各类社团,总有一个适合你"
+                  : "Academic, arts, sports, volunteer clubs and more",
               },
               {
                 icon: <Zap className="w-6 h-6" />,
-                title: "一键申请",
-                description: "简化报名流程,在线提交申请,实时查看审核进度",
+                title: language === "zh" ? "一键申请" : "One-Click Apply",
+                description: language === "zh"
+                  ? "简化报名流程,在线提交申请,实时查看审核进度"
+                  : "Streamlined application process with real-time status updates",
               },
               {
                 icon: <Heart className="w-6 h-6" />,
-                title: "社团互动",
-                description: "与志同道合的同学交流,参与精彩活动,丰富校园生活",
+                title: language === "zh" ? "社团互动" : "Club Interactions",
+                description: language === "zh"
+                  ? "与志同道合的同学交流,参与精彩活动,丰富校园生活"
+                  : "Connect with like-minded students and participate in exciting activities",
               },
             ].map((feature, index) => (
               <motion.div
@@ -684,7 +728,7 @@ const Index = () => {
               >
                 <Card className="h-full border-0 shadow-lg bg-white/80 backdrop-blur-xl hover:shadow-xl transition-shadow duration-300">
                   <CardContent className="p-6">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center text-blue-600 mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-blue-700 mb-4">
                       {feature.icon}
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
@@ -706,13 +750,17 @@ const Index = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <Card className="border-0 shadow-2xl bg-gradient-to-br from-blue-600 to-purple-700 text-white overflow-hidden relative">
-              <div className="absolute inset-0 bg-[url('https://nocode.meituan.com/photo/search?keyword=university,campus&width=800&height=600')] opacity-10 bg-cover bg-center" />
+            <Card className="border-0 shadow-2xl bg-gradient-to-br from-blue-700 to-blue-500 text-white overflow-hidden relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-800/20 to-indigo-800/20" />
               <CardContent className="relative p-12 text-center">
                 <Target className="w-12 h-12 mx-auto mb-6 opacity-80" />
-                <h2 className="text-3xl font-bold mb-4">准备好开启社团之旅了吗?</h2>
-                <p className="text-blue-100 mb-8 max-w-xl mx-auto">
-                  加入数千名同学,发现属于你的精彩社团,结识志同道合的朋友,创造难忘的大学回忆
+                <h2 className="text-3xl font-bold mb-4">
+                  {language === "zh" ? "准备好开启社团之旅了吗?" : "Ready to Start Your Club Journey?"}
+                </h2>
+                <p className="text-blue-50 mb-8 max-w-xl mx-auto">
+                  {language === "zh"
+                    ? "加入数千名同学,发现属于你的精彩社团,结识志同道合的朋友,创造难忘的大学回忆"
+                    : "Join thousands of students, discover amazing clubs, meet like-minded friends, and create unforgettable university memories"}
                 </p>
                 <Button 
                   size="lg" 
@@ -720,9 +768,50 @@ const Index = () => {
                   className="bg-white text-blue-600 hover:bg-blue-50 px-8 h-12 text-lg"
                   onClick={handleStartMatching}
                 >
-                  免费开始匹配
+                  {language === "zh" ? "免费开始匹配" : "Start Matching Free"}
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* 申请新社团区域 */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 via-blue-100 to-slate-50">
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <Card className="border-0 shadow-2xl bg-gradient-to-br from-blue-700 to-blue-500 text-white overflow-hidden relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-800/20 to-cyan-800/20" />
+              <CardContent className="relative p-8 md:p-12">
+                <div className="flex flex-col md:flex-row items-center gap-8">
+                  <div className="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                    <Building2 className="w-12 h-12 text-white" />
+                  </div>
+                  <div className="flex-1 text-center md:text-left">
+                    <h2 className="text-3xl font-bold mb-4">
+                      {language === "zh" ? "想要创建新社团？" : "Want to Create a New Club?"}
+                    </h2>
+                    <p className="text-blue-100 mb-6 text-lg">
+                      {language === "zh"
+                        ? "如果您有好的创意和想法，可以在线申请创建新社团。填写社团信息并通过审核后，即可正式运营！"
+                        : "If you have great ideas, you can apply to create a new club online. Fill in the information and get approved to start!"}
+                    </p>
+                    <Button
+                      size="lg"
+                      className="bg-white text-blue-600 hover:bg-blue-50"
+                      onClick={() => navigate("/apply-new-club")}
+                    >
+                      <Building2 className="w-5 h-5 mr-2" />
+                      {language === "zh" ? "申请创建社团" : "Apply to Create Club"}
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </motion.div>
@@ -735,15 +824,21 @@ const Index = () => {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <img src={logo} alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
-              <span className="font-bold text-gray-900">社团招新平台</span>
+              <span className="font-bold text-gray-900">{t("platformName", "社团招新平台")}</span>
             </div>
             <p className="text-gray-500 text-sm">
-              © 2026 高校社团招新智能匹配平台. All rights reserved.
+              © 2026 {language === "zh" ? "高校社团招新智能匹配平台" : "University Club Recruitment Platform"}. All rights reserved.
             </p>
             <div className="flex gap-6">
-              <a href="#" className="text-gray-500 hover:text-gray-700 text-sm">关于我们</a>
-              <a href="#" className="text-gray-500 hover:text-gray-700 text-sm">使用指南</a>
-              <a href="#" className="text-gray-500 hover:text-gray-700 text-sm">联系方式</a>
+              <a href="#" className="text-gray-500 hover:text-gray-700 text-sm">
+                {language === "zh" ? "关于我们" : "About Us"}
+              </a>
+              <a href="#" className="text-gray-500 hover:text-gray-700 text-sm">
+                {language === "zh" ? "使用指南" : "Help"}
+              </a>
+              <a href="#" className="text-gray-500 hover:text-gray-700 text-sm">
+                {language === "zh" ? "联系方式" : "Contact"}
+              </a>
             </div>
           </div>
         </div>

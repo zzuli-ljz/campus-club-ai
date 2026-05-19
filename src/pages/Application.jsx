@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { useUser } from "@/contexts/UserContext";
 import { useApplications } from "@/hooks/useApplications";
 import { useClubMembership } from "@/hooks/useClubMembership";
+import { useLanguage } from "@/contexts/LanguageContext";
 import Navbar from "@/components/Navbar";
 
 const Application = () => {
@@ -30,6 +31,7 @@ const Application = () => {
   const { user, profile, updateUser } = useUser();
   const { submitApplication, isLoading } = useApplications();
   const { checkIsMember, isLoading: checkingMembership } = useClubMembership();
+  const { language } = useLanguage();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [clubInfo, setClubInfo] = useState(null);
   const [isMember, setIsMember] = useState(false);
@@ -58,7 +60,7 @@ const Application = () => {
       
       // 检查社团是否正在招新
       if (!club.is_recruiting) {
-        toast.error("该社团已停止招新，无法提交申请");
+        toast.error(language === "zh" ? "该社团已停止招新，无法提交申请" : "This club is not recruiting, cannot submit application");
         // 延迟返回，让用户看到提示
         setTimeout(() => {
           navigate(`/clubs/${club.id}`);
@@ -76,8 +78,10 @@ const Application = () => {
         const result = await checkIsMember(user.id, club.id);
         if (result.isMember) {
           setIsMember(true);
-          setMemberRole(result.memberInfo?.role || '成员');
-          toast.error(`您已经是该社团的${result.memberInfo?.role || '成员'}，无需重复申请`);
+          setMemberRole(result.memberInfo?.role || (language === "zh" ? "成员" : "Member"));
+          toast.error(language === "zh" 
+            ? `您已经是该社团的${result.memberInfo?.role || '成员'}，无需重复申请`
+            : `You are already a ${result.memberInfo?.role || 'member'} of this club`);
         }
         setChecking(false);
       };
@@ -86,38 +90,40 @@ const Application = () => {
     } else {
       setChecking(false);
     }
-  }, [profile, location.state, user, checkIsMember, navigate]);
+  }, [profile, location.state, user, checkIsMember, navigate, language]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     // 再次检查社团是否正在招新
     if (!clubInfo?.is_recruiting) {
-      toast.error("该社团已停止招新，无法提交申请");
+      toast.error(language === "zh" ? "该社团已停止招新，无法提交申请" : "This club is not recruiting, cannot submit application");
       return;
     }
     
     // 再次检查是否已经是成员
     if (isMember) {
-      toast.error(`您已经是该社团的${memberRole}，无需重复申请`);
+      toast.error(language === "zh" 
+        ? `您已经是该社团的${memberRole}，无需重复申请`
+        : `You are already a ${memberRole} of this club`);
       return;
     }
     
     if (!formData.name.trim()) {
-      toast.error("请输入姓名");
+      toast.error(language === "zh" ? "请输入姓名" : "Please enter your name");
       return;
     }
     if (!formData.studentId.trim()) {
-      toast.error("请输入学号");
+      toast.error(language === "zh" ? "请输入学号" : "Please enter your student ID");
       return;
     }
     if (formData.selfIntro.trim().length < 10) {
-      toast.error("自我介绍至少需要10个字");
+      toast.error(language === "zh" ? "自我介绍至少需要10个字" : "Self introduction must be at least 10 characters");
       return;
     }
 
     if (!clubInfo) {
-      toast.error("社团信息缺失，请重新选择");
+      toast.error(language === "zh" ? "社团信息缺失，请重新选择" : "Missing club info, please select again");
       return;
     }
 
@@ -145,7 +151,7 @@ const Application = () => {
   // 如果用户已经是成员，显示提示页面
   if (!checking && isMember) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-slate-50 flex items-center justify-center p-4">
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <motion.div 
             className="absolute top-20 left-10 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30"
@@ -170,29 +176,31 @@ const Application = () => {
                 <CheckCircle className="w-10 h-10 text-green-500" />
               </motion.div>
               
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">您已是该社团成员</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">{language === "zh" ? "您已是该社团成员" : "You are already a member"}</h2>
               <p className="text-gray-500 mb-6">
-                您的身份是 <span className="font-medium text-green-600">{memberRole}</span>，无需重复申请
+                {language === "zh" 
+                  ? `您的身份是 ${memberRole}，无需重复申请`
+                  : `Your role is ${memberRole}, no need to apply again`}
               </p>
 
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <p className="text-sm text-gray-600 mb-1">社团：{clubInfo?.name}</p>
-                <p className="text-sm text-gray-500">您可以直接参与社团活动</p>
+                <p className="text-sm text-gray-600 mb-1">{language === "zh" ? "社团" : "Club"}: {clubInfo?.name}</p>
+                <p className="text-sm text-gray-500">{language === "zh" ? "您可以直接参与社团活动" : "You can participate in club activities directly"}</p>
               </div>
 
               <div className="space-y-3">
                 <Button 
-                  className="w-full h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+                  className="w-full h-12 bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-800 hover:to-blue-600 text-white"
                   onClick={() => navigate(`/clubs/${clubInfo?.id}`)}
                 >
-                  返回社团详情
+                  {language === "zh" ? "返回社团详情" : "Back to Club Detail"}
                 </Button>
                 <Button 
                   variant="outline"
                   className="w-full h-12"
                   onClick={() => navigate("/clubs")}
                 >
-                  浏览其他社团
+                  {language === "zh" ? "浏览其他社团" : "Browse Other Clubs"}
                 </Button>
               </div>
             </CardContent>
@@ -205,7 +213,7 @@ const Application = () => {
   // 如果社团已停止招新，显示提示页面
   if (!checking && clubInfo && !clubInfo.is_recruiting) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-slate-50 flex items-center justify-center p-4">
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <motion.div 
             className="absolute top-20 left-10 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30"
@@ -230,28 +238,28 @@ const Application = () => {
                 <AlertCircle className="w-10 h-10 text-gray-500" />
               </motion.div>
               
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">该社团已停止招新</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">{language === "zh" ? "该社团已停止招新" : "This club is not recruiting"}</h2>
               <p className="text-gray-500 mb-6">
-                <span className="font-medium text-blue-600">{clubInfo?.name}</span> 目前不接受新的申请
+                <span className="font-medium text-blue-600">{clubInfo?.name}</span> {language === "zh" ? "目前不接受新的申请" : "is not accepting new applications"}
               </p>
 
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <p className="text-sm text-gray-600">请关注社团后续动态，或浏览其他正在招新的社团</p>
+                <p className="text-sm text-gray-600">{language === "zh" ? "请关注社团后续动态，或浏览其他正在招新的社团" : "Follow club updates or browse other recruiting clubs"}</p>
               </div>
 
               <div className="space-y-3">
                 <Button 
-                  className="w-full h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+                  className="w-full h-12 bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-800 hover:to-blue-600 text-white"
                   onClick={() => navigate("/clubs")}
                 >
-                  浏览其他社团
+                  {language === "zh" ? "浏览其他社团" : "Browse Other Clubs"}
                 </Button>
                 <Button 
                   variant="outline"
                   className="w-full h-12"
                   onClick={() => navigate(`/clubs/${clubInfo?.id}`)}
                 >
-                  返回社团详情
+                  {language === "zh" ? "返回社团详情" : "Back to Club Detail"}
                 </Button>
               </div>
             </CardContent>
@@ -263,7 +271,7 @@ const Application = () => {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-slate-50 flex items-center justify-center p-4">
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <motion.div 
             className="absolute top-20 left-10 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30"
@@ -288,30 +296,32 @@ const Application = () => {
                 <CheckCircle className="w-10 h-10 text-white" />
               </motion.div>
               
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">申请已提交！</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">{language === "zh" ? "申请已提交！" : "Application Submitted!"}</h2>
               <p className="text-gray-500 mb-6">
-                你的报名申请已提交至 <span className="font-medium text-blue-600">{clubInfo?.name || "社团"}</span>，请耐心等待审核
+                {language === "zh" 
+                  ? `你的报名申请已提交至 ${clubInfo?.name || "社团"}，请耐心等待审核`
+                  : `Your application has been submitted to ${clubInfo?.name || "the club"}. Please wait for review.`}
               </p>
 
               <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
-                <p className="text-sm text-gray-600 mb-1">申请人：{formData.name}</p>
-                <p className="text-sm text-gray-600 mb-1">学号：{formData.studentId}</p>
-                <p className="text-sm text-gray-500">申请时间：{new Date().toLocaleString("zh-CN")}</p>
+                <p className="text-sm text-gray-600 mb-1">{language === "zh" ? "申请人" : "Applicant"}: {formData.name}</p>
+                <p className="text-sm text-gray-600 mb-1">{language === "zh" ? "学号" : "Student ID"}: {formData.studentId}</p>
+                <p className="text-sm text-gray-500">{language === "zh" ? "申请时间" : "Application Time"}: {new Date().toLocaleString(language === "zh" ? "zh-CN" : "en-US")}</p>
               </div>
 
               <div className="space-y-3">
                 <Button 
-                  className="w-full h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+                  className="w-full h-12 bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-800 hover:to-blue-600 text-white"
                   onClick={() => navigate("/profile")}
                 >
-                  查看报名记录
+                  {language === "zh" ? "查看报名记录" : "View Applications"}
                 </Button>
                 <Button 
                   variant="outline"
                   className="w-full h-12"
                   onClick={() => navigate("/clubs")}
                 >
-                  继续浏览社团
+                  {language === "zh" ? "继续浏览社团" : "Continue Browsing"}
                 </Button>
               </div>
             </CardContent>
@@ -322,7 +332,7 @@ const Application = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-slate-50">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div 
           className="absolute top-20 left-10 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30"
@@ -331,7 +341,7 @@ const Application = () => {
         />
       </div>
 
-      <Navbar title="申请报名" showBack={true} backText="返回" onBack={() => navigate(-1)} />
+      <Navbar title={language === "zh" ? "申请报名" : "Apply"} showBack={true} backText={language === "zh" ? "返回" : "Back"} onBack={() => navigate(-1)} />
 
       <main className="relative pt-24 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
@@ -340,8 +350,8 @@ const Application = () => {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
           >
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">填写报名信息</h1>
-            <p className="text-gray-600">完善你的个人信息，让社团更好地了解你</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{language === "zh" ? "填写报名信息" : "Fill Application Info"}</h1>
+            <p className="text-gray-600">{language === "zh" ? "完善你的个人信息，让社团更好地了解你" : "Complete your personal info so clubs can know you better"}</p>
           </motion.div>
 
           {clubInfo && (
@@ -351,10 +361,10 @@ const Application = () => {
               transition={{ delay: 0.1 }}
               className="mb-6"
             >
-              <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-purple-50 backdrop-blur-xl">
+              <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-blue-100 backdrop-blur-xl">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-700 to-blue-500 flex items-center justify-center">
                       <Building2 className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1">
@@ -364,9 +374,9 @@ const Application = () => {
                           {clubInfo.category}
                         </Badge>
                         {clubInfo.is_recruiting ? (
-                          <Badge className="text-xs bg-green-100 text-green-700">正在招新</Badge>
+                          <Badge className="text-xs bg-green-100 text-green-700">{language === "zh" ? "正在招新" : "Recruiting"}</Badge>
                         ) : (
-                          <Badge className="text-xs bg-gray-100 text-gray-700">已停止招新</Badge>
+                          <Badge className="text-xs bg-gray-100 text-gray-700">{language === "zh" ? "已停止招新" : "Not Recruiting"}</Badge>
                         )}
                       </div>
                     </div>
@@ -386,18 +396,18 @@ const Application = () => {
                 {checking || checkingMembership ? (
                   <div className="flex flex-col items-center justify-center py-12">
                     <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-4" />
-                    <p className="text-gray-500">正在检查申请资格...</p>
+                    <p className="text-gray-500">{language === "zh" ? "正在检查申请资格..." : "Checking eligibility..."}</p>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-2">
                       <Label htmlFor="name" className="text-gray-700 flex items-center gap-2">
                         <User className="w-4 h-4" />
-                        真实姓名
+                        {language === "zh" ? "真实姓名" : "Real Name"}
                       </Label>
                       <Input
                         id="name"
-                        placeholder="请输入你的真实姓名"
+                        placeholder={language === "zh" ? "请输入你的真实姓名" : "Enter your real name"}
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         className="h-12 bg-white/50 border-gray-200 focus:border-blue-500"
@@ -408,11 +418,11 @@ const Application = () => {
                     <div className="space-y-2">
                       <Label htmlFor="studentId" className="text-gray-700 flex items-center gap-2">
                         <Hash className="w-4 h-4" />
-                        学号
+                        {language === "zh" ? "学号" : "Student ID"}
                       </Label>
                       <Input
                         id="studentId"
-                        placeholder="请输入你的学号"
+                        placeholder={language === "zh" ? "请输入你的学号" : "Enter your student ID"}
                         value={formData.studentId}
                         onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
                         className="h-12 bg-white/50 border-gray-200 focus:border-blue-500"
@@ -423,24 +433,24 @@ const Application = () => {
                     <div className="space-y-2">
                       <Label htmlFor="selfIntro" className="text-gray-700 flex items-center gap-2">
                         <FileText className="w-4 h-4" />
-                        自我介绍
+                        {language === "zh" ? "自我介绍" : "Self Introduction"}
                       </Label>
                       <Textarea
                         id="selfIntro"
-                        placeholder="介绍一下自己吧！包括你的兴趣、特长、为什么想加入这个社团等..."
+                        placeholder={language === "zh" ? "介绍一下自己吧！包括你的兴趣、特长、为什么想加入这个社团等..." : "Introduce yourself! Include your interests, strengths, why you want to join this club..."}
                         value={formData.selfIntro}
                         onChange={(e) => setFormData({ ...formData, selfIntro: e.target.value })}
                         className="min-h-[150px] bg-white/50 border-gray-200 focus:border-blue-500 resize-none"
                         disabled={isLoading}
                       />
                       <p className="text-xs text-gray-500 text-right">
-                        {formData.selfIntro.length} / 200字建议
+                        {formData.selfIntro.length}{language === "zh" ? " / 200字建议" : " / 200 chars recommended"}
                       </p>
                     </div>
 
                     <Button 
                       type="submit"
-                      className="w-full h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium"
+                      className="w-full h-12 bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-800 hover:to-blue-600 text-white font-medium"
                       disabled={isLoading}
                     >
                       {isLoading ? (
@@ -448,7 +458,7 @@ const Application = () => {
                       ) : (
                         <>
                           <Send className="w-5 h-5 mr-2" />
-                          提交申请
+                          {language === "zh" ? "提交申请" : "Submit Application"}
                         </>
                       )}
                     </Button>
@@ -464,7 +474,7 @@ const Application = () => {
             transition={{ delay: 0.3 }}
             className="text-center text-sm text-gray-500 mt-6"
           >
-            提交申请即表示你同意社团的招新条款和隐私政策
+            {language === "zh" ? "提交申请即表示你同意社团的招新条款和隐私政策" : "By submitting, you agree to the club recruitment terms and privacy policy"}
           </motion.p>
         </div>
       </main>

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // 创建 Context
 const UserContext = createContext(null);
@@ -9,13 +10,14 @@ const UserContext = createContext(null);
 export const useUser = () => {
   const context = useContext(UserContext);
   if (!context) {
-    throw new Error("useUser 必须在 UserProvider 内使用");
+    throw new Error("useUser must be used within UserProvider");
   }
   return context;
 };
 
 // Provider 组件
 export const UserProvider = ({ children }) => {
+  const { language } = useLanguage();
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -148,8 +150,8 @@ export const UserProvider = ({ children }) => {
         if (loginError) {
           // 如果登录提示邮箱未验证，说明后端验证仍然开启
           if (loginError.message.includes('Email not confirmed') || loginError.message.includes('not confirmed')) {
-            toast.error("邮箱验证已启用，请使用验证码登录方式，或联系管理员关闭验证");
-            return { success: false, error: "邮箱未验证" };
+            toast.error(language === "zh" ? "邮箱验证已启用，请使用验证码登录方式，或联系管理员关闭验证" : "Email verification is enabled. Please use OTP login or contact admin to disable verification");
+            return { success: false, error: "email_not_verified" };
           }
           throw loginError;
         }
@@ -166,9 +168,9 @@ export const UserProvider = ({ children }) => {
             })
             .eq('id', loginData.user.id);
             
-          if (profileError) console.error("更新资料失败:", profileError);
+          if (profileError) console.error("Failed to update profile:", profileError);
           
-          toast.success("注册成功！已自动登录");
+          toast.success(language === "zh" ? "注册成功！已自动登录" : "Registration successful! Logged in automatically");
           return { success: true, role: 'student' };
         }
       }
@@ -189,11 +191,11 @@ export const UserProvider = ({ children }) => {
         setUser(authData.user);
       }
 
-      toast.success("注册成功！");
+      toast.success(language === "zh" ? "注册成功！" : "Registration successful!");
       return { success: true, role: 'student' };
     } catch (error) {
-      console.error("注册失败:", error);
-      toast.error(error.message || "注册失败");
+      console.error("Registration failed:", error);
+      toast.error(error.message || (language === "zh" ? "注册失败" : "Registration failed"));
       return { success: false, error: error.message };
     } finally {
       setIsLoading(false);
@@ -215,28 +217,28 @@ export const UserProvider = ({ children }) => {
           });
 
           if (authError) {
-            console.error('学校管理员 Supabase 登录失败:', authError);
+            console.error('School admin Supabase login failed:', authError);
             // 如果 Supabase 登录失败，回退到本地模式
             const adminProfile = {
               id: 'school-admin',
               email: 'school@admin.com',
-              name: '学校管理员',
+              name: language === "zh" ? "学校管理员" : "School Admin",
               role: 'school_admin',
             };
             setUser({ id: 'school-admin', email: 'school@admin.com' });
             setProfile(adminProfile);
-            toast.success("欢迎回来，学校管理员（本地模式）");
+            toast.success(language === "zh" ? "欢迎回来，学校管理员（本地模式）" : "Welcome back, School Admin (local mode)");
             return { success: true, role: 'school_admin' };
           }
 
           if (authData.user) {
             setUser(authData.user);
             await loadUserProfile(authData.user.id);
-            toast.success("欢迎回来，学校管理员");
+            toast.success(language === "zh" ? "欢迎回来，学校管理员" : "Welcome back, School Admin");
             return { success: true, role: 'school_admin' };
           }
         } else {
-          throw new Error("学校管理员账号或密码错误");
+          throw new Error(language === "zh" ? "学校管理员账号或密码错误" : "Invalid school admin credentials");
         }
       }
 
@@ -250,11 +252,11 @@ export const UserProvider = ({ children }) => {
           .single();
 
         if (adminError || !adminData) {
-          throw new Error("社团管理员账号不存在");
+          throw new Error(language === "zh" ? "社团管理员账号不存在" : "Club admin account not found");
         }
 
         if (adminData.password_hash !== password) {
-          throw new Error("密码错误");
+          throw new Error(language === "zh" ? "密码错误" : "Incorrect password");
         }
 
         const adminProfile = {
@@ -268,7 +270,7 @@ export const UserProvider = ({ children }) => {
         
         setUser({ id: `club-admin-${adminData.id}`, email: adminData.email });
         setProfile(adminProfile);
-        toast.success(`欢迎回来，${adminData.club_name}管理员`);
+        toast.success(language === "zh" ? `欢迎回来，${adminData.club_name}管理员` : `Welcome back, ${adminData.club_name} Admin`);
         return { success: true, role: 'club_admin' };
       }
 
@@ -279,26 +281,35 @@ export const UserProvider = ({ children }) => {
       });
 
       if (authError) {
+        console.error('Login failed:', authError);
         // 特殊处理邮箱未验证错误
         if (authError.message.includes('Email not confirmed') || 
             authError.message.includes('not confirmed') ||
             authError.message.includes('验证') ||
             authError.code === 'email_not_confirmed') {
-          toast.error("邮箱未验证，请切换到「验证码登录」方式");
+          toast.error(language === "zh" ? "邮箱未验证，请切换到「验证码登录」方式" : "Email not verified. Please switch to OTP login");
           return { 
             success: false, 
             error: "email_not_confirmed",
-            message: "邮箱未验证，请使用验证码登录"
+            message: language === "zh" ? "邮箱未验证，请使用验证码登录" : "Email not verified. Please use OTP login"
           };
         }
         throw authError;
       }
 
-      toast.success("登录成功！欢迎回来");
+      // 登录成功后，验证会话是否正确设置
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('Failed to get session:', sessionError);
+      } else {
+        console.log('Session set after login:', sessionData?.session ? 'valid' : 'invalid');
+      }
+
+      toast.success(language === "zh" ? "登录成功！欢迎回来" : "Login successful! Welcome back");
       return { success: true, role: 'student' };
     } catch (error) {
-      console.error("登录失败:", error);
-      toast.error(error.message || "登录失败");
+      console.error("Login failed:", error);
+      toast.error(error.message || (language === "zh" ? "登录失败" : "Login failed"));
       return { success: false, error: error.message };
     } finally {
       setIsLoading(false);
@@ -318,7 +329,7 @@ export const UserProvider = ({ children }) => {
 
       if (error) throw error;
 
-      toast.success("验证码已发送至邮箱，请查收");
+      toast.success(language === "zh" ? "验证码已发送至邮箱，请查收" : "Verification code sent to your email");
       return { success: true };
     } catch (error) {
       toast.error(error.message);
@@ -337,21 +348,21 @@ export const UserProvider = ({ children }) => {
       });
 
       if (error) {
-        console.error("OTP 验证失败:", error);
+        console.error("OTP verification failed:", error);
         // 提供更友好的错误提示
         if (error.message.includes('expired') || error.message.includes('invalid')) {
-          toast.error("验证码已过期或无效，请重新获取");
+          toast.error(language === "zh" ? "验证码已过期或无效，请重新获取" : "Code expired or invalid. Please request a new one");
         } else {
           toast.error(error.message);
         }
         return { success: false, error: error.message };
       }
 
-      toast.success("登录成功！");
+      toast.success(language === "zh" ? "登录成功！" : "Login successful!");
       return { success: true, data };
     } catch (error) {
-      console.error("验证 OTP 失败:", error);
-      toast.error(error.message || "验证失败，请重试");
+      console.error("OTP verification failed:", error);
+      toast.error(error.message || (language === "zh" ? "验证失败，请重试" : "Verification failed. Please try again"));
       return { success: false, error: error.message };
     }
   };
@@ -366,9 +377,9 @@ export const UserProvider = ({ children }) => {
       
       setUser(null);
       setProfile(null);
-      toast.success("已退出登录");
+      toast.success(language === "zh" ? "已退出登录" : "Logged out successfully");
     } catch (error) {
-      console.error("登出失败:", error);
+      console.error("Logout failed:", error);
     }
   };
 
@@ -388,10 +399,10 @@ export const UserProvider = ({ children }) => {
       if (error) throw error;
 
       setProfile(prev => ({ ...prev, ...updates }));
-      toast.success("资料已更新");
+      toast.success(language === "zh" ? "资料已更新" : "Profile updated");
       return { success: true };
     } catch (error) {
-      toast.error("更新失败: " + error.message);
+      toast.error((language === "zh" ? "更新失败: " : "Update failed: ") + error.message);
       return { success: false, error: error.message };
     }
   };
@@ -408,7 +419,7 @@ export const UserProvider = ({ children }) => {
         .single();
 
       if (existing) {
-        throw new Error("该邮箱已被注册");
+        throw new Error(language === "zh" ? "该邮箱已被注册" : "This email is already registered");
       }
 
       const { data, error } = await supabase
@@ -426,7 +437,7 @@ export const UserProvider = ({ children }) => {
 
       if (error) throw error;
 
-      toast.success("社团管理员账号创建成功");
+      toast.success(language === "zh" ? "社团管理员账号创建成功" : "Club admin account created successfully");
       return { success: true, data };
     } catch (error) {
       toast.error(error.message);
@@ -446,7 +457,7 @@ export const UserProvider = ({ children }) => {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error("获取管理员账号失败:", error);
+      console.error("Failed to get admin accounts:", error);
       return [];
     }
   };
@@ -461,7 +472,7 @@ export const UserProvider = ({ children }) => {
 
       if (error) throw error;
 
-      toast.success("账号已删除");
+      toast.success(language === "zh" ? "账号已删除" : "Account deleted");
       return { success: true };
     } catch (error) {
       toast.error(error.message);

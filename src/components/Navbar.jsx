@@ -17,20 +17,29 @@ import {
   LayoutDashboard, 
   Shield, 
   Users,
-  GraduationCap
+  GraduationCap,
+  Bell,
+  Globe
 } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
+import { useNotificationsContext } from "@/contexts/NotificationContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import logo from "@/assets/logo.png";
 
 const Navbar = ({ 
   showBack = false, 
-  backText = "返回", 
+  backText, 
   onBack,
   title = null,
   rightContent = null 
 }) => {
   const navigate = useNavigate();
   const { user, profile, isLoggedIn, logout, role } = useUser();
+  const { unreadCount } = useNotificationsContext();
+  const { language, toggleLanguage, t } = useLanguage();
+
+  // 使用翻译作为默认后退文本
+  const defaultBackText = backText || t("back", "返回");
 
   const handleLogout = () => {
     logout();
@@ -55,11 +64,11 @@ const Navbar = ({
           <Button
             variant="ghost"
             size="sm"
-            className="text-purple-700 hover:text-purple-800 hover:bg-purple-50"
+            className="text-blue-700 hover:text-blue-800 hover:bg-blue-50"
             onClick={() => navigate("/school-admin")}
           >
             <Shield className="w-4 h-4 mr-2" />
-            学校后台
+            {t("schoolAdmin", "学校后台")}
           </Button>
         );
       case "club_admin":
@@ -71,7 +80,7 @@ const Navbar = ({
             onClick={() => navigate("/club-admin")}
           >
             <LayoutDashboard className="w-4 h-4 mr-2" />
-            社团后台
+            {t("clubAdmin", "社团后台")}
           </Button>
         );
       case "student":
@@ -84,7 +93,7 @@ const Navbar = ({
             onClick={() => navigate("/profile")}
           >
             <User className="w-4 h-4 mr-2" />
-            个人中心
+            {t("personalCenter", "个人中心")}
           </Button>
         );
     }
@@ -103,14 +112,14 @@ const Navbar = ({
               className="cursor-pointer"
             >
               <Shield className="w-4 h-4 mr-2" />
-              学校管理后台
+              {t("schoolManagement", "学校管理后台")}
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => navigate("/")}
               className="cursor-pointer"
             >
               <img src={logo} alt="Logo" className="w-4 h-4 mr-2 object-contain" />
-              返回首页
+              {t("returnToHome", "返回首页")}
             </DropdownMenuItem>
           </>
         );
@@ -122,14 +131,14 @@ const Navbar = ({
               className="cursor-pointer"
             >
               <LayoutDashboard className="w-4 h-4 mr-2" />
-              社团管理后台
+              {t("clubManagementBackend", "社团管理后台")}
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => navigate("/")}
               className="cursor-pointer"
             >
               <img src={logo} alt="Logo" className="w-4 h-4 mr-2 object-contain" />
-              返回首页
+              {t("returnToHome", "返回首页")}
             </DropdownMenuItem>
           </>
         );
@@ -142,14 +151,14 @@ const Navbar = ({
               className="cursor-pointer"
             >
               <User className="w-4 h-4 mr-2" />
-              个人中心
+              {t("personalCenter", "个人中心")}
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => navigate("/clubs")}
               className="cursor-pointer"
             >
               <Users className="w-4 h-4 mr-2" />
-              浏览社团
+              {t("browseClubs", "浏览社团")}
             </DropdownMenuItem>
           </>
         );
@@ -164,20 +173,20 @@ const Navbar = ({
       case "school_admin":
         return {
           icon: <Shield className="w-3 h-3" />,
-          color: "bg-purple-500",
-          label: "学校"
+          color: "bg-blue-600",
+          label: t("roleSchool", "学校")
         };
       case "club_admin":
         return {
           icon: <LayoutDashboard className="w-3 h-3" />,
           color: "bg-blue-500",
-          label: "社团"
+          label: t("roleClub", "社团")
         };
       default:
         return {
           icon: <GraduationCap className="w-3 h-3" />,
           color: "bg-green-500",
-          label: "学生"
+          label: t("roleStudent", "学生")
         };
     }
   };
@@ -202,7 +211,7 @@ const Navbar = ({
                 onClick={handleBack}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">{backText}</span>
+                <span className="hidden sm:inline">{defaultBackText}</span>
               </Button>
             ) : null}
             
@@ -211,8 +220,8 @@ const Navbar = ({
                 {title ? (
                 <span className="font-bold text-gray-900">{title}</span>
               ) : (
-                <span className="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 hidden sm:inline">
-                  社团招新平台
+                <span className="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-blue-500 hidden sm:inline">
+                  {t("platformName", "社团招新平台")}
                 </span>
               )}
             </Link>
@@ -226,6 +235,34 @@ const Navbar = ({
 
           {/* 右侧区域 - 用户状态 */}
           <div className="flex items-center gap-2">
+            {/* 语言切换按钮 */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-600 hover:text-blue-600 hover:bg-blue-50 font-medium"
+              onClick={toggleLanguage}
+              title={t("switchLanguage", "切换语言")}
+            >
+              <Globe className="w-4 h-4 mr-1" />
+              <span>{language === "zh" ? "EN" : "中"}</span>
+            </Button>
+
+            {/* 通知按钮 - 仅在登录后显示 */}
+            {isLoggedIn && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative w-9 h-9 text-gray-600 hover:text-blue-600 hover:bg-blue-50"
+                onClick={() => navigate(role === 'club_admin' ? "/admin-notifications" : "/notifications")}
+              >
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg animate-pulse">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </Button>
+            )}
             {isLoggedIn ? (
               // 已登录状态
               <DropdownMenu>
@@ -234,8 +271,8 @@ const Navbar = ({
                     <div className="relative">
                       <Avatar className="w-8 h-8">
                         <AvatarFallback className={`bg-gradient-to-br ${
-                          role === 'school_admin' ? 'from-purple-500 to-purple-700' :
-                          role === 'club_admin' ? 'from-blue-500 to-blue-700' :
+                          role === 'school_admin' ? 'from-blue-700 to-blue-500' :
+                          role === 'club_admin' ? 'from-blue-600 to-blue-400' :
                           'from-green-500 to-emerald-600'
                         } text-white text-sm`}>
                           {profile?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
@@ -249,7 +286,7 @@ const Navbar = ({
                     </div>
                     <div className="hidden sm:flex flex-col items-start">
                       <span className="text-gray-700 font-medium max-w-[100px] truncate text-sm">
-                        {profile?.name || user?.email?.split('@')[0] || "用户"}
+                        {profile?.name || user?.email?.split('@')[0] || t("student", "用户")}
                       </span>
                       <span className="text-xs text-gray-400">{roleIndicator?.label}</span>
                     </div>
@@ -258,7 +295,7 @@ const Navbar = ({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 bg-white/95 backdrop-blur-xl">
                   <div className="px-3 py-2 border-b border-gray-100">
-                    <p className="text-sm font-medium text-gray-900">{profile?.name || "用户"}</p>
+                    <p className="text-sm font-medium text-gray-900">{profile?.name || t("student", "用户")}</p>
                     <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                     {role === "club_admin" && profile?.club_name && (
                       <p className="text-xs text-blue-600 mt-1">{profile.club_name}</p>
@@ -271,7 +308,7 @@ const Navbar = ({
                     className="cursor-pointer text-red-600 focus:text-red-600"
                   >
                     <LogOut className="w-4 h-4 mr-2" />
-                    退出登录
+                    {t("logout", "退出登录")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -280,12 +317,12 @@ const Navbar = ({
               <div className="flex items-center gap-2">
                 <Link to="/login">
                   <Button variant="ghost" size="sm" className="text-gray-700 hover:text-gray-900">
-                    登录
+                    {t("login", "登录")}
                   </Button>
                 </Link>
                 <Link to="/register">
-                  <Button size="sm" className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white">
-                    立即加入
+                  <Button size="sm" className="bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-800 hover:to-blue-600 text-white">
+                    {t("joinNow", "立即加入")}
                   </Button>
                 </Link>
               </div>

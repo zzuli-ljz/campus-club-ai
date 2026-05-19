@@ -15,6 +15,7 @@ import {
   X
 } from "lucide-react";
 import { useClubs } from "@/hooks/useClubs";
+import { useLanguage } from "@/contexts/LanguageContext";
 import Navbar from "@/components/Navbar";
 
 // 所有可筛选的标签
@@ -28,15 +29,16 @@ const allTags = [
 
 const categoryColors = {
   "学术科技": "bg-blue-100 text-blue-700",
-  "文艺创作": "bg-purple-100 text-purple-700",
+  "文艺创作": "bg-blue-100 text-blue-700",
   "体育运动": "bg-orange-100 text-orange-700",
   "公益实践": "bg-green-100 text-green-700",
-  "技术工程": "bg-indigo-100 text-indigo-700"
+  "技术工程": "bg-blue-100 text-blue-700"
 };
 
 const Clubs = () => {
   const navigate = useNavigate();
   const { clubs, isLoading } = useClubs();
+  const { language } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
@@ -67,16 +69,16 @@ const Clubs = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-slate-50">
       {/* 背景装饰 */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div 
-          className="absolute top-20 left-10 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30"
+          className="absolute top-20 left-10 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30"
           animate={{ scale: [1, 1.2, 1], x: [0, 50, 0] }}
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div 
-          className="absolute top-40 right-10 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30"
+          className="absolute top-40 right-10 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20"
           animate={{ scale: [1, 1.1, 1], x: [0, -30, 0] }}
           transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
         />
@@ -86,7 +88,7 @@ const Clubs = () => {
       <Navbar 
         rightContent={
           <div className="text-sm text-gray-500">
-            浏览全部社团
+            {language === "zh" ? "浏览全部社团" : "Browse All Clubs"}
           </div>
         }
       />
@@ -101,10 +103,10 @@ const Clubs = () => {
             className="text-center mb-8"
           >
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              发现精彩<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-600">社团</span>
+              {language === "zh" ? "发现精彩" : "Discover"}{language === "zh" ? <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-blue-500">社团</span> : <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-blue-500">Clubs</span>}
             </h1>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              浏览所有社团，找到属于你的兴趣圈子
+              {language === "zh" ? "浏览所有社团，找到属于你的兴趣圈子" : "Browse all clubs and find your interest circle"}
             </p>
           </motion.div>
 
@@ -119,7 +121,7 @@ const Clubs = () => {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <Input
-                  placeholder="搜索社团名称或描述..."
+                  placeholder={language === "zh" ? "搜索社团名称或描述..." : "Search club name or description..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 h-12 bg-white/80 border-gray-200 focus:border-blue-500"
@@ -131,7 +133,7 @@ const Clubs = () => {
                 onClick={() => setShowFilters(!showFilters)}
               >
                 <Filter className="w-4 h-4 mr-2" />
-                筛选标签
+                {language === "zh" ? "筛选标签" : "Filter Tags"}
                 {selectedTags.length > 0 && (
                   <Badge className="ml-2 bg-blue-500 text-white">{selectedTags.length}</Badge>
                 )}
@@ -147,14 +149,14 @@ const Clubs = () => {
                 className="bg-white/80 backdrop-blur-xl rounded-xl p-4 border border-gray-200"
               >
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-gray-700">选择标签筛选</span>
+                  <span className="text-sm font-medium text-gray-700">{language === "zh" ? "选择标签筛选" : "Select tags to filter"}</span>
                   {selectedTags.length > 0 && (
                     <button
                       onClick={clearFilters}
                       className="text-sm text-blue-600 hover:text-blue-700 flex items-center"
                     >
                       <X className="w-4 h-4 mr-1" />
-                      清空筛选
+                      {language === "zh" ? "清空筛选" : "Clear Filters"}
                     </button>
                   )}
                 </div>
@@ -196,7 +198,7 @@ const Clubs = () => {
 
           {/* 结果统计 */}
           <div className="mb-6 text-sm text-gray-500">
-            {isLoading ? "加载中..." : `共找到 ${filteredClubs.length} 个社团`}
+            {isLoading ? (language === "zh" ? "加载中..." : "Loading...") : (language === "zh" ? `共找到 ${filteredClubs.length} 个社团` : `Found ${filteredClubs.length} clubs`)}
           </div>
 
           {/* 社团卡片网格 */}
@@ -221,11 +223,17 @@ const Clubs = () => {
                   >
                     {/* 图片区域 */}
                     <div className="relative h-48 overflow-hidden">
-                      <img 
-                        src={club.image || `https://nocode.meituan.com/photo/search?keyword=club,activity&width=400&height=300`} 
-                        alt={club.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
+                      {club.image ? (
+                        <img 
+                          src={club.image}
+                          alt={club.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 flex items-center justify-center">
+                          <span className="text-4xl font-bold text-white/30">{club.name?.[0] || '社'}</span>
+                        </div>
+                      )}
                       <div className="absolute top-3 left-3">
                         <Badge className={`${categoryColors[club.category] || "bg-gray-100 text-gray-700"} border-0`}>
                           {club.category}
@@ -235,18 +243,18 @@ const Clubs = () => {
                       <div className="absolute top-3 right-3">
                         {club.is_recruiting ? (
                           <Badge className="bg-green-500 text-white border-0 shadow-md">
-                            正在招新
+                            {language === "zh" ? "正在招新" : "Recruiting"}
                           </Badge>
                         ) : (
                           <Badge className="bg-gray-500 text-white border-0 shadow-md">
-                            已停止招新
+                            {language === "zh" ? "已停止招新" : "Not Recruiting"}
                           </Badge>
                         )}
                       </div>
                       {/* 非招新状态时的遮罩 */}
                       {!club.is_recruiting && (
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                          <span className="text-white font-medium text-lg">已停止招新</span>
+                          <span className="text-white font-medium text-lg">{language === "zh" ? "已停止招新" : "Not Recruiting"}</span>
                         </div>
                       )}
                     </div>
@@ -282,11 +290,11 @@ const Clubs = () => {
                         <div className="flex items-center gap-4">
                           <span className="flex items-center gap-1">
                             <Users className="w-4 h-4" />
-                            {club.members || 0}人
+                            {club.members || 0}{language === "zh" ? "人" : " members"}
                           </span>
                           <span className="flex items-center gap-1">
                             <MapPin className="w-4 h-4" />
-                            {club.location || "待定"}
+                            {club.location || (language === "zh" ? "待定" : "TBD")}
                           </span>
                         </div>
                         <ArrowRight className="w-4 h-4 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -308,10 +316,10 @@ const Clubs = () => {
               <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
                 <Search className="w-10 h-10 text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">未找到匹配的社团</h3>
-              <p className="text-gray-500 mb-4">尝试调整搜索关键词或筛选标签</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">{language === "zh" ? "未找到匹配的社团" : "No matching clubs found"}</h3>
+              <p className="text-gray-500 mb-4">{language === "zh" ? "尝试调整搜索关键词或筛选标签" : "Try adjusting search keywords or filter tags"}</p>
               <Button variant="outline" onClick={clearFilters}>
-                清空筛选条件
+                {language === "zh" ? "清空筛选条件" : "Clear Filter Conditions"}
               </Button>
             </motion.div>
           )}

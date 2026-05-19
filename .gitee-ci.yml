@@ -1,0 +1,23 @@
+stages:
+  - install
+  - build
+
+# 使用 Node.js 18 的镜像
+image: node:18-alpine
+
+install-job:
+  stage: install
+  script:
+    - npm config set registry https://registry.npmmirror.com
+    - npm install
+  cache:
+    paths:
+      - node_modules/
+
+build-job:
+  stage: build
+  script:
+    - npm run build
+  artifacts:
+    paths:
+      - dist/

@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export const useApplications = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const { notifyApplicationResult, notifyNewApplication } = useNotifications();
 
   // 提交报名申请
   const submitApplication = useCallback(async (applicationData) => {
@@ -12,6 +14,20 @@ export const useApplications = () => {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) throw new Error('请先登录');
+
+      // 获取用户信息
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', user.id)
+        .single();
+
+      // 获取社团名称
+      const { data: clubData } = await supabase
+        .from('clubs')
+        .select('name')
+        .eq('id', applicationData.club_id)
+        .single();
 
       const { data, error } = await supabase
         .from('applications')
@@ -25,6 +41,13 @@ export const useApplications = () => {
         .single();
 
       if (error) throw error;
+
+      // 发送通知给社团管理员
+      await notifyNewApplication(
+        applicationData.club_id,
+        profile?.name || '新成员',
+        clubData?.name || '社团'
+      );
       
       toast.success('申请已提交！');
       return { success: true, data };
@@ -35,7 +58,7 @@ export const useApplications = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [notifyNewApplication]);
 
   // 获取用户的报名记录
   const getUserApplications = useCallback(async (userId) => {
@@ -109,7 +132,7 @@ export const useApplications = () => {
   }, []);
 
   // 更新申请状态
-  const updateApplicationStatus = useCallback(async (applicationId, status) => {
+  const updateApplicationStatus = useCallback(async (applicationId, status, reason = '') => {
     try {
       // 先获取申请信息
       const { data: appData, error: fetchError } = await supabase
@@ -119,6 +142,15 @@ export const useApplications = () => {
         .single();
       
       if (fetchError) throw fetchError;
+
+      // 获取社团名称
+      const { data: clubData } = await supabase
+        .from('clubs')
+        .select('name')
+        .eq('id', appData.club_id)
+        .single();
+
+      const clubName = clubData?.name || '社团';
 
       // 更新申请状态
       const { data, error } = await supabase
@@ -136,49 +168,83 @@ export const useApplications = () => {
       // 如果申请被批准，自动添加到 club_members 表
       if (status === 'approved') {
         try {
-          // 检查是否已经是成员
-          const { data: existingMember } = await supabase
+          // 检查是否已经是 active 状态的成员
+          const { data: existingActiveMember } = await supabase
             .from('club_members')
             .select('id')
             .eq('club_id', appData.club_id)
             .eq('user_id', appData.user_id)
-            .single();
+            .eq('status', 'active')
+            .maybeSingle();
 
-          // 如果不是成员，则添加
-          if (!existingMember) {
-            const { error: memberError } = await supabase
+          // 如果不是 active 成员，则添加或恢复
+          if (!existingActiveMember) {
+            // 检查是否有 inactive 的旧记录
+            const { data: existingInactiveMember } = await supabase
               .from('club_members')
-              .insert({
-                club_id: appData.club_id,
-                user_id: appData.user_id,
-                name: appData.name,
-                role: '成员',
-                join_date: new Date().toISOString(),
-                status: 'active'
-              });
+              .select('id')
+              .eq('club_id', appData.club_id)
+              .eq('user_id', appData.user_id)
+              .eq('status', 'inactive')
+              .maybeSingle();
 
-            if (memberError) {
-              console.error('添加到成员表失败:', memberError);
+            if (existingInactiveMember) {
+              // 恢复 inactive 记录为 active
+              const { error: memberError } = await supabase
+                .from('club_members')
+                .update({ 
+                  status: 'active',
+                  join_date: new Date().toISOString(),
+                  role: '成员'
+                })
+                .eq('club_id', appData.club_id)
+                .eq('user_id', appData.user_id);
+
+              if (memberError) {
+                console.error('恢复成员状态失败:', memberError);
+              } else {
+                console.log('已恢复社团成员身份');
+              }
             } else {
-              console.log('已自动添加到社团成员');
+              // 插入新记录
+              const { error: memberError } = await supabase
+                .from('club_members')
+                .insert({
+                  club_id: appData.club_id,
+                  user_id: appData.user_id,
+                  name: appData.name,
+                  role: '成员',
+                  join_date: new Date().toISOString(),
+                  status: 'active'
+                });
+
+              if (memberError) {
+                console.error('添加到成员表失败:', memberError);
+              } else {
+                console.log('已自动添加到社团成员');
+              }
             }
           }
 
-          // 更新社团成员数量
-          const { data: membersCount } = await supabase
+          // 更新社团成员数量（只统计 active 状态的成员）
+          const { count: activeMembersCount } = await supabase
             .from('club_members')
-            .select('id', { count: 'exact' })
-            .eq('club_id', appData.club_id);
+            .select('id', { count: 'exact', head: true })
+            .eq('club_id', appData.club_id)
+            .eq('status', 'active');
 
           await supabase
             .from('clubs')
-            .update({ members: membersCount?.length || 0 })
+            .update({ members: activeMembersCount || 0 })
             .eq('id', appData.club_id);
 
         } catch (memberErr) {
           console.error('处理成员添加时出错:', memberErr);
         }
       }
+
+      // 发送通知给学生
+      await notifyApplicationResult(appData.user_id, clubName, status === 'approved', reason);
 
       toast.success(status === 'approved' ? '已通过申请' : '已拒绝申请');
       return { success: true, data };
@@ -187,7 +253,7 @@ export const useApplications = () => {
       toast.error('操作失败: ' + err.message);
       return { success: false, error: err.message };
     }
-  }, []);
+  }, [notifyApplicationResult]);
 
   // 获取用户已加入的社团（从 club_members 表）
   const getUserJoinedClubs = useCallback(async (userId) => {

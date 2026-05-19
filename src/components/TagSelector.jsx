@@ -1,3 +1,4 @@
+// AI辅助生成：豆包AI, 2026-03-31
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +12,9 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Plus, X, Tag } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
+// AI辅助生成：豆包AI, 2026-03-31
 const TagSelector = ({
   category,
   availableTags = [],
@@ -19,11 +22,17 @@ const TagSelector = ({
   onTagsChange,
   onAddCustomTag,
   maxTags = 10,
+  allowCustomTags = true,
+  showPendingTags = false,
+  pendingTags = [],
 }) => {
+  // AI辅助生成：豆包AI, 2026-03-31
+  const { t, language } = useLanguage();
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customTag, setCustomTag] = useState('');
   const [selectValue, setSelectValue] = useState('');
 
+  // AI辅助生成：豆包AI, 2026-03-31
   // 过滤掉已选择的标签
   const filteredTags = availableTags.filter(tag => !selectedTags.includes(tag));
 
@@ -36,7 +45,7 @@ const TagSelector = ({
 
     if (value && !selectedTags.includes(value)) {
       if (selectedTags.length >= maxTags) {
-        toast.warning(`最多只能选择 ${maxTags} 个标签`);
+        toast.warning(language === "zh" ? `最多只能选择 ${maxTags} 个标签` : `Maximum ${maxTags} tags allowed`);
         return;
       }
       onTagsChange([...selectedTags, value]);
@@ -44,16 +53,17 @@ const TagSelector = ({
     }
   };
 
+  // AI辅助生成：豆包AI, 2026-03-31
   const handleAddCustomTag = async () => {
     const trimmedTag = customTag.trim();
     if (!trimmedTag) {
-      toast.error('请输入标签名称');
+      toast.error(language === "zh" ? '请输入标签名称' : 'Please enter tag name');
       return;
     }
 
     // 检查是否已存在
     if (selectedTags.includes(trimmedTag)) {
-      toast.error('该标签已选择');
+      toast.error(language === "zh" ? '该标签已选择' : 'Tag already selected');
       return;
     }
 
@@ -61,10 +71,17 @@ const TagSelector = ({
       // 如果标签已存在于列表中，直接添加
       onTagsChange([...selectedTags, trimmedTag]);
     } else {
-      // 如果是新标签，先保存到数据库
-      const result = await onAddCustomTag(category, trimmedTag);
-      if (result.success) {
+      // 如果是新标签
+      if (onAddCustomTag) {
+        // 如果有 onAddCustomTag，则调用（用于直接保存到数据库的场景）
+        const result = await onAddCustomTag(category, trimmedTag);
+        if (result.success) {
+          onTagsChange([...selectedTags, trimmedTag]);
+        }
+      } else {
+        // 如果没有 onAddCustomTag，直接添加到已选标签（预添加模式）
         onTagsChange([...selectedTags, trimmedTag]);
+        toast.success(language === "zh" ? `已添加新标签：${trimmedTag}（审核后生效）` : `New tag added: ${trimmedTag} (effective after review)`);
       }
     }
 
@@ -76,27 +93,41 @@ const TagSelector = ({
     onTagsChange(selectedTags.filter(tag => tag !== tagToRemove));
   };
 
+  // AI辅助生成：豆包AI, 2026-03-31
   return (
     <div className="space-y-3">
       {/* 已选择的标签展示 */}
       {selectedTags.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {selectedTags.map((tag) => (
-            <Badge
-              key={tag}
-              variant="secondary"
-              className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 flex items-center gap-1"
-            >
-              <Tag className="w-3 h-3" />
-              {tag}
-              <button
-                onClick={() => handleRemoveTag(tag)}
-                className="ml-1 hover:text-blue-900"
+          {selectedTags.map((tag) => {
+            const isNewTag = !availableTags.includes(tag);
+            return (
+              <Badge
+                key={tag}
+                variant="secondary"
+                className={`px-3 py-1 flex items-center gap-1 ${
+                  isNewTag
+                    ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300'
+                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                }`}
+                title={isNewTag ? (language === "zh" ? '新标签（审核后生效）' : 'New tag (effective after review)') : ''}
               >
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
-          ))}
+                <Tag className="w-3 h-3" />
+                {tag}
+                {isNewTag && (
+                  <span className="text-xs ml-1 opacity-70">
+                    {language === "zh" ? '新' : 'New'}
+                  </span>
+                )}
+                <button
+                  onClick={() => handleRemoveTag(tag)}
+                  className="ml-1 hover:text-blue-900"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            );
+          })}
         </div>
       )}
 
@@ -104,7 +135,7 @@ const TagSelector = ({
       {!showCustomInput ? (
         <Select value={selectValue} onValueChange={handleSelectTag}>
           <SelectTrigger className="w-full">
-            <SelectValue placeholder={`选择${category}标签（已选择 ${selectedTags.length}/${maxTags}）`} />
+            <SelectValue placeholder={language === "zh" ? `选择${category}标签（已选择 ${selectedTags.length}/${maxTags}）` : `Select ${category} tags (${selectedTags.length}/${maxTags} selected)`} />
           </SelectTrigger>
           <SelectContent>
             {filteredTags.map((tag) => (
@@ -112,16 +143,16 @@ const TagSelector = ({
                 {tag}
               </SelectItem>
             ))}
-            <SelectItem value="custom" className="text-purple-600 font-medium">
+            <SelectItem value="custom" className="text-blue-700 font-medium">
               <Plus className="w-4 h-4 inline mr-1" />
-              添加自定义标签...
+              {language === "zh" ? "添加自定义标签..." : "Add custom tag..."}
             </SelectItem>
           </SelectContent>
         </Select>
       ) : (
         <div className="flex gap-2">
           <Input
-            placeholder="输入新标签名称"
+            placeholder={language === "zh" ? "输入新标签名称" : "Enter new tag name"}
             value={customTag}
             onChange={(e) => setCustomTag(e.target.value)}
             className="flex-1"
@@ -133,7 +164,7 @@ const TagSelector = ({
             }}
             autoFocus
           />
-          <Button onClick={handleAddCustomTag} size="sm" className="bg-purple-600">
+          <Button onClick={handleAddCustomTag} size="sm" className="bg-blue-600">
             <Plus className="w-4 h-4" />
           </Button>
           <Button
@@ -144,13 +175,13 @@ const TagSelector = ({
               setCustomTag('');
             }}
           >
-            取消
+            {language === "zh" ? "取消" : "Cancel"}
           </Button>
         </div>
       )}
 
       {selectedTags.length === 0 && (
-        <p className="text-xs text-gray-500">请至少选择一个标签</p>
+        <p className="text-xs text-gray-500">{language === "zh" ? "请至少选择一个标签" : "Please select at least one tag"}</p>
       )}
     </div>
   );
