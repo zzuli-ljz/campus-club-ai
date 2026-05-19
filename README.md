@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Logo](src/assets/logo.png)
+<img src="src/assets/logo.png" width="120" alt="Campus Club AI Logo" />
 
 **基于 AI 的智能校园社团管理与服务平台**
 
